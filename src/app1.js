@@ -1,3 +1,10 @@
+/* ===== Dispositivo: celular (app) ou computador (site) =====
+   O site escolhe a "casca" pela largura da tela e troca sozinho se a janela mudar (girar o celular, redimensionar). */
+const MQ=matchMedia('(min-width:1024px)');
+const DESK=()=>MQ.matches;
+const setDev=()=>{document.documentElement.dataset.dev=DESK()?'d':'m'};
+setDev();
+
 /* ===== Utilidades ===== */
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -153,4 +160,4 @@ function lashArc(){
   }
   return `<svg class="lash" viewBox="0 0 400 200" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="${lid}"/><path d="${l}"/></g></svg>`;
 }
-const brand=()=>`<button class="logo" data-go="home" aria-label="Beauty Hub, início">Beauty Hub</button>`;
+const brand=()=>`<button class="logo" data-go="home" aria-label="Beauty Hub, início">${logoMark(true)}<span>Beauty Hub</span></button>`;

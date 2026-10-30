@@ -19,3 +19,13 @@ Para regenerar o index.html depois de editar: python3 build.py
 --- Visual (referência do cliente) ---
 Cabeçalho e rodapé em ameixa (#4A0E24), rosé (#B87C86), off-white (#F6E8EB), rosé metálico (#D4A798), títulos finos em caixa alta.
 Home: categorias agora são Salões por perto, 5 estrelas, Palestrantes, Verificadas, A domicílio, Cursos, Eventos e Produtos.
+
+--- Versão responsiva (celular x computador) ---
+O site escolhe sozinho o layout pela largura da tela e troca ao girar o aparelho ou redimensionar a janela:
+  Celular / tablet em pé (menos de 1024 px): estilo aplicativo, barra superior com BH + Beauty Hub, barra inferior (Home, Agendamentos, Mensagens, Perfil), janelas que sobem de baixo.
+  Computador (1024 px ou mais): estilo site, menu no topo, menu da conta (Meu perfil, Agendamentos, Mensagens, Favoritos, Sair), grades de várias colunas, formulários em duas colunas.
+Correção do bug: o index.html não tinha a configuração de tela (viewport) nem o doctype, então o celular desenhava a página como se tivesse ~980 px de largura (texto minúsculo, layout de computador). Agora build.py gera o documento completo.
+Somente modo claro: o modo escuro foi removido e o site declara color-scheme: light.
+Logo: sigla trocada de HB para BH (cabeçalho, rodapé, login, ícone da aba).
+Código: header() e footer() (src/app2.js) abrem e fecham a casca de cada dispositivo; as páginas têm um só conteúdo. Estilos em src/styles-head.html (seção RESPONSIVO).
+Para regenerar o index.html depois de editar: python3 build.py

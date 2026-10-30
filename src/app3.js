@@ -127,7 +127,7 @@ function finishSignup(){
 let PT='sobre';
 function meuPerfil(){
   const u=S.user;
-  if(!u){app().innerHTML=header('meu-perfil')+`<main class="wrap"><div class="empty-state" style="margin-top:40px"><h2 style="font-size:34px;color:var(--ink)">Você ainda não tem um perfil</h2><p>Faça o cadastro em 4 passos e escolha um plano para aparecer no Beauty Hub.</p><button class="btn" data-go="cadastro">Criar meu perfil ${ic('arrow')}</button></div></main>`+footer();return}
+  if(!u){app().innerHTML=header('meu-perfil')+`<main class="wrap"><div class="empty-state mt40"><h2 style="font-size:34px;color:var(--ink)">Você ainda não tem um perfil</h2><p>Faça o cadastro em 4 passos e escolha um plano para aparecer no Beauty Hub.</p><button class="btn" data-go="cadastro">Criar meu perfil ${ic('arrow')}</button></div></main>`+footer();return}
   const P=PLANS()[u.plano],x=P.perms,tipo=PROFILE_TYPES.find(t=>t.id===u.tipo);
   const stMap={pendente:['Em análise',''],aprovado:['Aprovado','ok'],recusado:['Recusado','bad'],suspenso:['Suspenso','bad']};
   const [stT,stC]=stMap[u.status]||stMap.pendente;

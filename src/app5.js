@@ -42,10 +42,6 @@ function tabbar(cur){
  const T=[['home','home','Home'],['agendamentos','cal','Agendamentos'],['mensagens','chat','Mensagens'],['perfil','user','Perfil']];
  return `<nav class="tabbar" aria-label="Principal">${T.map(([r,i,l])=>`<button data-go="${r}" ${cur===r?'aria-current="page"':''}>${ic(i)}<span>${l}</span></button>`).join('')}</nav>`;
 }
-function topbar(home){
- return `<header class="ap-top ${home?'home':''}">${home?logoRow():`<button class="ap-back" data-xback aria-label="${needSetup()?'Sair da conta':'Voltar'}">${ic('back')}</button>${logoRow()}<span class="ap-sp"></span>`}${home?`<div class="ap-act"><button class="ib" data-xnotif aria-label="Notificações">${ic('bell')}</button><button class="ib" data-xmore aria-label="Mais opções">${ic('dots')}</button></div>`:''}</header>`;
-}
-
 /* ===================== CONFIGURAR PERFIL ===================== */
 let P=null,PE={},SUG={},srchT,cepT;
 function newSetup(){
@@ -106,15 +102,14 @@ function setupPage(keep,focusNum){
  const y=window.scrollY;
  if(!keep||!P){P=newSetup();PE={}}
  const a=myAcc()||{},pro=isPro(a),edit=!needSetup();
- app().innerHTML=`<div class="app nobar">${topbar(false)}
-  <h1 class="ap-title">${edit?'Editar perfil':'Complete seu cadastro'}</h1>
-  <p class="ap-sub">${edit?'Atualize seus dados quando quiser.':pro?'Precisamos de mais alguns dados para publicar o seu perfil profissional.':'Precisamos de mais alguns dados para liberar o app.'}</p>
+ const sub=edit?'Atualize seus dados quando quiser.':pro?'Precisamos de mais alguns dados para publicar o seu perfil profissional.':'Precisamos de mais alguns dados para liberar o app.';
+ app().innerHTML=header('configurar-perfil',{nobar:true})+hero({title:edit?'Editar perfil':'Complete seu cadastro',sub})+`<main class="wrap">
   <div class="ap-who"><label class="ap-photo" for="x-photo">${avatarHTML(P.photo,'','xl')}<span class="cam">${ic('camera')}</span><input id="x-photo" type="file" accept="image/*" hidden></label>
    <b>${esc(a.nome||'')}</b><span class="pill">${ic(pro?'eyel':'user')}${pro?'Profissional':'Cliente'}</span><small>${esc(a.doc||'')}</small></div>
-  <section class="xsec"><h2>Endereço</h2><p class="xd">Ative sua localização ou busque seu endereço, depois confirme o número.</p>${addrBlock('')}</section>
-  ${pro?proSections():`<section class="xsec"><h2>Estilos que você gosta</h2><p class="xd">Opcional. Ajuda a encontrar profissionais para o seu tipo de olhar.</p>${chips(PREFS.map(x=>[x,x]),P.pref,'data-xpref')}</section>`}
+  <div class="xform"><section class="xsec"><h2>Endereço</h2><p class="xd">Ative sua localização ou busque seu endereço, depois confirme o número.</p>${addrBlock('')}</section>
+  ${pro?proSections():`<section class="xsec"><h2>Estilos que você gosta</h2><p class="xd">Opcional. Ajuda a encontrar profissionais para o seu tipo de olhar.</p>${chips(PREFS.map(x=>[x,x]),P.pref,'data-xpref')}</section>`}</div>
   <div class="xtip">${ic('eyel')}<p>${pro?'Depois de concluir, adicione fotos dos seus trabalhos no perfil. Elas fazem toda a diferença para novas clientes.':'Depois de concluir, salve suas profissionais favoritas e solicite um horário direto pelo app.'}</p></div>
-  <button class="abtn xfinish" data-xfinish>${edit?'Salvar alterações':'Concluir cadastro'}</button></div>`;
+  <button class="abtn xfinish" data-xfinish>${edit?'Salvar alterações':'Concluir cadastro'}</button></main>`+footer();
  window.scrollTo(0,y);
  if(focusNum)$('#x-num')?.focus();
 }
@@ -235,14 +230,14 @@ function proCardApp(p){
   <div class="pc-r"><button class="pc-fav ${f?'on':''}" data-fav="${p.id}" aria-pressed="${f}" aria-label="${f?'Remover dos favoritos':'Salvar nos favoritos'}">${ic('heart')}</button>${mp<1e9?`<small>a partir de</small><b>${brl0(mp)}</b>`:''}</div></article>`;
 }
 function homeListHTML(){
- const L=homeList(),show=H.all?L:L.slice(0,4);
+ const L=homeList(),show=(H.all||DESK())?L:L.slice(0,4);
  const emp=H.cat?'Nenhuma profissional nesta categoria por enquanto.':H.sort==='fav'?'Você ainda não favoritou ninguém. Toque no coração de uma profissional para salvar.':'Nenhuma profissional encontrada.';
- return (show.length?show.map(proCardApp).join(''):`<div class="ap-empty">${ic('eyel')}<p>${emp}</p></div>`)+(!H.all&&L.length>4?`<button class="btn ghost ap-more" data-xall>Ver todas (${L.length})</button>`:'');
+ return (show.length?show.map(proCardApp).join(''):`<div class="ap-empty">${ic('eyel')}<p>${emp}</p></div>`)+(!H.all&&!DESK()&&L.length>4?`<button class="btn ghost ap-more" data-xall>Ver todas (${L.length})</button>`:'');
 }
 function homePage(){
  const a=myAcc()||{},pro=isPro(a),st=mySetup(),cur=CATS.find(c=>c[0]===H.cat);
  const sorts=[['near','Perto de você'],['fav','Favoritos'],['price','Preço (menor)'],['rate','Melhor avaliação']];
- app().innerHTML=`<div class="app">${topbar(true)}
+ app().innerHTML=header('home')+`<main class="wrap">
   <section class="ap-hero">${lashArc()}<span class="kk">${greet()}</span><h1>${esc(firstName())}</h1>
    <p>${pro?'Como está o seu estúdio hoje?':'Encontre quem cuida do seu olhar.'}</p>
    <div class="ap-search">${ic('search')}<input id="x-q" type="search" placeholder="Buscar serviço ou profissional" value="${esc(H.q)}" aria-label="Buscar serviço ou profissional"><button class="fl" data-xfilter aria-label="Filtros">${ic('sliders')}</button></div></section>
@@ -251,8 +246,7 @@ function homePage(){
   <div class="tiles">${CATS.map(([k,l,i])=>`<button class="tile" ${k[0]==='@'?`data-go="${k.slice(1)}"`:`data-xcat="${k}" aria-pressed="${H.cat===k}"`}><span class="ti">${ic(i)}</span><span class="tl">${l}</span></button>`).join('')}</div>
   <div class="xchips sorts" role="group" aria-label="Ordenar">${sorts.map(([k,l])=>`<button class="xchip lg" data-xsort="${k}" aria-pressed="${H.sort===k}">${l}</button>`).join('')}</div>
   <div class="ap-sh"><h2>${cur?cur[1]:'Especialistas em destaque'}</h2><button class="lk2" data-xall>${H.all?'Ver menos':'Ver todos'} ${ic('arrow')}</button></div>
-  <div id="x-list" class="pcs">${homeListHTML()}</div>
-  ${tabbar('home')}</div>`;
+  <div id="x-list" class="pcs">${homeListHTML()}</div></main>`+footer();
 }
 function openFilter(){
  openSheet(`${closeBtn}<div class="body"><h2>Filtros</h2><span class="xcap">Ordenar por</span>
@@ -303,12 +297,10 @@ function confirmBook(id){
 }
 function agendaPage(){
  const L=S.appts.filter(x=>x.acc===S.session).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
- app().innerHTML=`<div class="app">${topbar(true)}<h1 class="ap-title">Agendamentos</h1><p class="ap-sub">Seus horários solicitados.</p>
-  <div class="pcs">${L.length?L.map(x=>`<article class="pc ag"><div class="dt"><b>${pd(x.date).getDate()}</b><span>${MON[pd(x.date).getMonth()]}</span></div><div class="pc-b"><h3>${esc(x.svc)}</h3><small>${esc(x.proName)} · ${x.time} · ${brl0(x.price)}</small><div class="pc-t"><span>${x.st}</span></div></div><button class="btn sm ghost" data-xcancel="${x.id}">Cancelar</button></article>`).join(''):`<div class="ap-empty">${ic('cal')}<p>Nenhum agendamento ainda.</p><button class="btn" data-go="home">Encontrar profissional</button></div>`}</div>${tabbar('agendamentos')}</div>`;
+ app().innerHTML=header('agendamentos')+hero({title:'Agendamentos',sub:'Seus horários solicitados.'})+`<main class="wrap"><div class="pcs">${L.length?L.map(x=>`<article class="pc ag"><div class="dt"><b>${pd(x.date).getDate()}</b><span>${MON[pd(x.date).getMonth()]}</span></div><div class="pc-b"><h3>${esc(x.svc)}</h3><small>${esc(x.proName)} · ${x.time} · ${brl0(x.price)}</small><div class="pc-t"><span>${x.st}</span></div></div><button class="btn sm ghost" data-xcancel="${x.id}">Cancelar</button></article>`).join(''):`<div class="ap-empty">${ic('cal')}<p>Nenhum agendamento ainda.</p><button class="btn" data-go="home">Encontrar profissional</button></div>`}</div></main>`+footer();
 }
 function msgPage(){
- app().innerHTML=`<div class="app">${topbar(true)}<h1 class="ap-title">Mensagens</h1><p class="ap-sub">Suas conversas com profissionais.</p>
-  <div class="ap-empty">${ic('chat')}<p>Nenhuma conversa ainda. Abra o perfil de uma profissional e fale com ela pelo WhatsApp.</p><button class="btn" data-go="home">Ver profissionais</button></div>${tabbar('mensagens')}</div>`;
+ app().innerHTML=header('mensagens')+hero({title:'Mensagens',sub:'Suas conversas com profissionais.'})+`<main class="wrap"><div class="ap-empty">${ic('chat')}<p>Nenhuma conversa ainda. Abra o perfil de uma profissional e fale com ela pelo WhatsApp.</p><button class="btn" data-go="home">Ver profissionais</button></div></main>`+footer();
 }
 
 /* ===================== PERFIL (aba) ===================== */
@@ -316,15 +308,14 @@ function perfilPage(){
  const a=myAcc()||{},s=mySetup()||{},pro=isPro(a),wk=(s.atend==='domicilio'||s.mesmo)?s:(s.w||{});
  const row=(l,v)=>v?`<div class="fact"><small>${l}</small>${esc(v)}</div>`:'';
  const addr=o=>[o.rua&&(o.rua+', '+o.num),o.bairro,o.cidade&&(o.cidade+' - '+o.uf),o.cep].filter(Boolean).join(' · ');
- app().innerHTML=`<div class="app">${topbar(true)}
+ app().innerHTML=header('perfil')+hero({title:'Meu perfil',sub:'Seus dados e preferências.'})+`<main class="wrap"><div class="pf2"><div class="pf2-a">
   <div class="ap-who left">${avatarHTML(s.photo,a.nome,'xl')}<b>${esc(pro?(s.nomeProf||a.nome):a.nome)}</b><span class="pill">${ic(pro?'eyel':'user')}${pro?esc(s.spec||'Profissional'):'Cliente'}</span><small>${esc(a.email||'')}</small></div>
-  <div class="row-actions" style="justify-content:center"><button class="btn" data-go="configurar-perfil">Editar perfil</button></div>
-  <section class="xsec"><h2>Endereço</h2><div class="facts">${row('Endereço',addr(s))}</div></section>
+  <div class="row-actions" style="justify-content:center"><button class="btn" data-go="configurar-perfil">Editar perfil</button></div></div>
+  <div class="pf2-b"><section class="xsec"><h2>Endereço</h2><div class="facts">${row('Endereço',addr(s))}</div></section>
   ${pro?`<section class="xsec"><h2>Serviços</h2><div class="xps">${(s.services||[]).map(v=>`<div><span>${esc(v.n)}<small>${durTxt(v.d)}</small></span><b>${brl0(v.p)}</b></div>`).join('')}</div></section>
   <section class="xsec"><h2>Atendimento</h2><div class="facts">${row('Tipo',(ATEND.find(x=>x[0]===s.atend)||[])[1])}${s.atend!=='domicilio'?row('Local de trabalho',addr(wk)):''}${s.atend!=='estudio'?row('Raio a domicílio','até '+s.raio+' km'):''}${row('Horários',(s.dias||[]).map(d=>DIAS[d]).join(', ')+' · '+s.abre+' às '+s.fecha)}${row('Pagamento',(s.pagto||[]).join(', '))}${row('WhatsApp',s.wa)}${row('Instagram',s.ig?'@'+s.ig:'')}</div></section>
   <section class="xsec"><h2>Plano e divulgação</h2><p class="xd">Escolha um plano para destacar o seu perfil e liberar mais recursos.</p><button class="btn ghost" data-go="${S.user?'meu-perfil':'cadastro'}">${S.user?'Ver meu plano':'Escolher plano'}</button></section>`:`<section class="xsec"><h2>Estilos que você gosta</h2><div class="xchips">${(s.pref||[]).length?s.pref.map(x=>`<span class="xchip lg" aria-pressed="true">${esc(x)}</span>`).join(''):'<p class="xd">Nenhum estilo escolhido.</p>'}</div></section>`}
-  <section class="xsec"><div class="xmenu">${[['favoritos','Favoritos','heart'],['eventos','Eventos','cal'],['educacao','Educação','cap'],['mercado','Mercado','store'],['network','Network','users']].map(([r,t,i])=>`<button data-go="${r}">${ic(i)}<span>${t}</span>${ic('chev')}</button>`).join('')}<button data-logout class="out">${ic('out')}<span>Sair da conta</span></button></div></section>
-  ${tabbar('perfil')}</div>`;
+  </div><div class="pf2-c"><section class="xsec"><div class="xmenu">${[['favoritos','Favoritos','heart'],['eventos','Eventos','cal'],['educacao','Educação','cap'],['mercado','Mercado','store'],['network','Network','users']].map(([r,t,i])=>`<button data-go="${r}">${ic(i)}<span>${t}</span>${ic('chev')}</button>`).join('')}<button data-logout class="out">${ic('out')}<span>Sair da conta</span></button></div></section></div></div></main>`+footer();
 }
 
 /* ===================== EVENTOS ===================== */

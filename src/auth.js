@@ -39,7 +39,7 @@ function startSession(acc){S.session=acc.id;S.user=S.profiles[acc.id]||null;save
 function logout(){S.session=null;S.user=null;save();closeSheet();go('entrar')}
 
 /* ----- visual ----- */
-const logoMark=(sm)=>`<span class="pinlogo ${sm?'sm':''}"><svg viewBox="0 0 64 52" aria-hidden="true"><text x="32" y="42" text-anchor="middle" font-family="'Cormorant Garamond',Georgia,serif" font-size="50" font-weight="300" letter-spacing="-7" fill="currentColor">HB</text></svg></span>`;
+const logoMark=(sm)=>`<span class="pinlogo ${sm?'sm':''}"><svg viewBox="0 0 64 52" aria-hidden="true"><text x="32" y="42" text-anchor="middle" font-family="'Cormorant Garamond',Georgia,serif" font-size="50" font-weight="300" letter-spacing="-7" fill="currentColor">BH</text></svg></span>`;
 const bubbles='<i class="bubble b1"></i><i class="bubble b2"></i><i class="bubble b3"></i><i class="bubble b4"></i>';
 const fld=(id,label,icon,attrs,err,extra='')=>`<div class="af"><label for="${id}">${label}</label><div class="inp ${err?'bad':''}">${ic(icon)}<input id="${id}" ${attrs}>${extra}</div>${err?`<div class="err" role="alert">${err}</div>`:''}</div>`;
 const eyeBtn=`<button type="button" class="eye" data-eye aria-label="Mostrar senha">${ic('eye')}</button>`;

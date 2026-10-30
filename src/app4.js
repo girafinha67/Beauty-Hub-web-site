@@ -32,7 +32,7 @@ function adminPage(){
     body=`<div class="tw"><table><thead><tr><th>Avaliação</th><th>Sobre</th><th>Nota</th><th>Status</th><th>Ações</th></tr></thead><tbody>${SEED_REVIEWS.map(v=>{const st=S.revStatus[v.id]||v.status;return `<tr><td><b style="font-weight:500">${esc(v.autor)}</b><br><small style="color:var(--muted)">${esc(v.texto)}</small></td><td>${esc(v.alvo)}</td><td>${v.nota}/5</td><td>${statusPill(st==='aprovada'?'aprovado':st==='removida'?'recusado':'pendente').replace('Aprovado','Aprovada').replace('Recusado','Removida')}</td><td><div class="row-actions">${st!=='aprovada'?`<button class="btn sm" data-rev="${v.id}:aprovada">Aprovar</button>`:''}${st!=='removida'?`<button class="btn sm ghost" data-rev="${v.id}:removida">Remover</button>`:''}</div></td></tr>`}).join('')}</tbody></table></div>`;
   }
   app().innerHTML=header('admin')+`<main class="wrap" style="padding-bottom:8px"><div class="adm-warn"><b>Protótipo.</b> Painel aberto para demonstração; os dados ficam só neste navegador. Na versão final, o acesso exige login de administrador.</div>
-   <h1 style="font-size:46px">Painel administrativo</h1><div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" aria-selected="${A.tab===k}" data-atab="${k}">${l}${k==='cad'&&pend?` (${pend})`:''}</button>`).join('')}</div>${body}</main>`+footer();
+   <h1 class="pg-h1">Painel administrativo</h1><div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" aria-selected="${A.tab===k}" data-atab="${k}">${l}${k==='cad'&&pend?` (${pend})`:''}</button>`).join('')}</div>${body}</main>`+footer();
 }
 
 /* ===== Roteador ===== */
@@ -42,7 +42,7 @@ function route(){
   if(!S.session&&!AUTH_ROUTES.includes(r)){r='entrar';history.replaceState(null,'','#entrar')}
   if(S.session&&AUTH_ROUTES.includes(r)){r='home';history.replaceState(null,'','#home')}
   if(needSetup()&&r!=='configurar-perfil'&&!AUTH_ROUTES.includes(r)){r='configurar-perfil';history.replaceState(null,'','#configurar-perfil')}
-  CUR=r;document.body.classList.toggle('appmode',APP_ROUTES.includes(r));
+  CUR=r;document.body.classList.toggle('appmode',!AUTH_ROUTES.includes(r));
   if(AUTH_ROUTES.includes(r)){authPage(r);document.title=(r==='entrar'?'Entrar':'Criar conta')+' | Beauty Hub';return}
   if(MODS[r])modPage(r);
   else({home:homePage,mercado:mercadoPage,network:netPage,radar:radarPage,busca:searchPage,favoritos:favPage,cadastro:signupPage,'meu-perfil':meuPerfil,admin:adminPage,'configurar-perfil':()=>setupPage(),agendamentos:agendaPage,mensagens:msgPage,perfil:perfilPage})[r]();
@@ -51,7 +51,7 @@ function route(){
   window.scrollTo(0,0);
 }
 function go(r){if(location.hash==='#'+r)route();else location.hash=r}
-function refreshHeader(){const h=$('.hdr');if(h){const o=$('#nav')?.classList.contains('open');h.outerHTML=header(CUR);if(o)$('#nav')?.classList.add('open')}}
+function refreshHeader(){const h=$('.hdr');if(h)h.outerHTML=deskHeader(CUR)}
 function syncFav(id){
   const f=S.favs.includes(id);
   $$(`[data-fav="${id}"]`).forEach(b=>{b.classList.toggle('on',f);b.setAttribute('aria-pressed',f);if(b.classList.contains('heart'))b.setAttribute('aria-label',f?'Remover dos favoritos':'Salvar nos favoritos');else{const s=$('span',b);if(s)s.textContent=f?'Salvo nos favoritos':'Salvar nos favoritos'}});
@@ -61,6 +61,10 @@ function syncFav(id){
 /* ===== Eventos de interface ===== */
 document.addEventListener('click',e=>{
   const t=e.target;let el;
+  const pop=$('#acc-pop');
+  if(t.closest('[data-acc]')){const b=t.closest('[data-acc]'),o=pop.hidden;pop.hidden=!o;b.setAttribute('aria-expanded',o);return}
+  if(pop&&!pop.hidden&&!t.closest('#acc-pop'))pop.hidden=true;
+  if(t.closest('[data-back]')){if(history.length>1)history.back();else go('home');return}
   if(t.id==='ov'||t.closest('[data-close]')){closeSheet();return}
   if(el=t.closest('[data-fav]')){const id=el.dataset.fav,i=S.favs.indexOf(id);if(i>=0)S.favs.splice(i,1);else S.favs.push(id);save();syncFav(id);toast(i>=0?'Removido dos favoritos':'Salvo nos favoritos');if(CUR==='favoritos'&&$('#ov').hidden)favPage();return}
   if(el=t.closest('[data-follow]')){const id=el.dataset.follow,i=S.follows.indexOf(id);if(i>=0)S.follows.splice(i,1);else S.follows.push(id);save();$$(`[data-follow="${id}"]`).forEach(b=>{b.textContent=i>=0?'Seguir':'Seguindo';b.setAttribute('aria-pressed',i<0)});toast(i>=0?'Você deixou de seguir':'Você está seguindo');return}
@@ -90,7 +94,7 @@ document.addEventListener('click',e=>{
   if(el=t.closest('[data-reg]')){const [id,st]=el.dataset.reg.split(':');setReg(id,st);toast('Status atualizado: '+st);adminPage();return}
   if(el=t.closest('[data-rev]')){const [id,st]=el.dataset.rev.split(':');S.revStatus[id]=st;save();toast('Avaliação '+st);adminPage();return}
 });
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#ov').hidden)closeSheet()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('#ov').hidden)closeSheet();const p=$('#acc-pop');if(p)p.hidden=true}});
 document.addEventListener('input',e=>{
   const t=e.target;
   if(t.dataset&&t.dataset.bind){const k=t.dataset.bind;D[k]=t.type==='checkbox'?t.checked:t.value;if(D.err[k]){delete D.err[k];const er=t.closest('.f,.ck')?.querySelector('.err');if(er)er.remove()}if(k==='bio')$('#bio-n').textContent=t.value.length}
@@ -122,5 +126,13 @@ document.addEventListener('submit',e=>{
   }
 });
 addEventListener('hashchange',route);
+/* Trocou de celular para computador (ou o contrário): refaz a página no layout certo, sem perder o que foi digitado. */
+MQ.addEventListener('change',()=>{
+  setDev();
+  if(AUTH_ROUTES.includes(CUR))return;
+  const y=scrollY;
+  if(CUR==='configurar-perfil'&&P)setupPage(true);else route();
+  scrollTo(0,y);
+});
 document.addEventListener('DOMContentLoaded',route);
 if(document.readyState!=='loading')route();

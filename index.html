@@ -1,5 +1,13 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#4A0E24">
+<meta name="description" content="Beauty Hub: o ponto de encontro do mercado da beleza.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%234A0E24'/%3E%3Ctext x='32' y='43' text-anchor='middle' font-family='Georgia,serif' font-size='30' fill='%23D4A798'%3EBH%3C/text%3E%3C/svg%3E">
 <title>Beauty Hub</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Jost:wght@300;400;500&display=swap">
 <style>
 /* Visual: fundo claro e quente, muito espaço em branco, vinho só nos botões e no logo, rosé como único acento. */
@@ -9,11 +17,8 @@
   --ok:#2F7A55; --warn:#A8651B; --bad:#A8322F;
   --shadow:0 1px 2px rgba(74,14,36,.05),0 12px 32px rgba(74,14,36,.07);
   --display:'Cormorant Garamond',Georgia,serif; --body:'Jost','Helvetica Neue',Arial,sans-serif;
+  color-scheme:light;
 }
-@media (prefers-color-scheme: dark){:root{
-  --bg:#150710; --surface:#1E0F19; --surface2:#28161F; --soft:#2F1822; --ink:#F6E8EB; --muted:#BE9AA3; --line:#36202C;
-  --wine:#9B3158; --on-wine:#FFFFFF; --accent-ink:#F0C9D1; --rose:#D79AA6;
-  --ok:#6FC79B; --warn:#E3A862; --bad:#F08A86; --shadow:0 12px 32px rgba(0,0,0,.35); color-scheme:dark}}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
@@ -39,12 +44,9 @@ h1,h2,h3{font-family:var(--display);font-weight:500;line-height:1.1;margin:0;tex
 .nav button{background:none;border:0;color:var(--muted);font-size:15px;padding:8px 14px;border-radius:999px}
 .nav button:hover{color:var(--ink)}
 .nav button[aria-current="page"]{color:var(--ink);background:var(--soft)}
-.nav .only-m{display:none}
 .hdr-r{display:flex;align-items:center;gap:10px}
 .ib{width:40px;height:40px;display:grid;place-items:center;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);position:relative}
 .ib .cnt{position:absolute;top:-4px;right:-4px;background:var(--wine);color:var(--on-wine);border-radius:999px;font-size:10px;min-width:17px;height:17px;display:grid;place-items:center;font-weight:500}
-.menu-btn{display:none}
-.ib.out{color:var(--muted)}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--wine);color:var(--on-wine);border:1px solid var(--wine);border-radius:999px;padding:10px 22px;font-size:15px;font-weight:500;min-height:44px;text-decoration:none}
 .btn:hover{filter:brightness(1.15)}
 .btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
@@ -64,7 +66,7 @@ h1,h2,h3{font-family:var(--display);font-weight:500;line-height:1.1;margin:0;tex
 .search svg{color:var(--muted)}
 .search input{flex:1;min-width:0;border:0;background:transparent;outline:0;padding:10px 4px;font-size:16px}
 /* cards */
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;align-items:start}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:20px;align-items:start}
 .list{display:grid;gap:20px;max-width:720px;margin-top:40px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:26px;display:flex;flex-direction:column;gap:12px;min-width:0;position:relative;cursor:pointer;transition:box-shadow .2s,border-color .2s}
 .card:hover{box-shadow:var(--shadow);border-color:var(--rose)}
@@ -87,7 +89,7 @@ h1,h2,h3{font-family:var(--display);font-weight:500;line-height:1.1;margin:0;tex
 .av{width:48px;height:48px;border-radius:50%;background:var(--soft);color:var(--accent-ink);display:grid;place-items:center;font-weight:500;font-size:16px;flex:none}
 .av.lg{width:84px;height:84px;font-size:28px;font-family:var(--display)}
 /* module tiles */
-.mod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px}
+.mod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(230px,100%),1fr));gap:16px}
 .mod{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px;text-align:left;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
 .mod:hover{border-color:var(--rose);box-shadow:var(--shadow)}
 .mod .ico{width:44px;height:44px;border-radius:50%;background:var(--soft);color:var(--accent-ink);display:grid;place-items:center;font-size:20px;margin-bottom:6px}
@@ -225,8 +227,6 @@ tr:last-child td{border-bottom:0}
 .pinlogo{display:inline-flex;color:var(--wine)}
 .pinlogo svg{width:62px;height:auto}
 .pinlogo.sm svg{width:34px}
-[data-x] .pinlogo{color:var(--rose)}
-@media (prefers-color-scheme: dark){.pinlogo{color:var(--rose)}}
 .auth h1{font-family:var(--body);font-weight:600;font-size:40px;letter-spacing:-.01em}
 .uline{display:block;width:50px;height:4px;border-radius:4px;background:var(--rose);margin:12px 0 16px}
 .auth .lead{margin:0 0 26px;font-size:18px}
@@ -274,21 +274,8 @@ tr:last-child td{border-bottom:0}
 .ck2 input{width:26px;height:26px;margin:2px 0 0;accent-color:var(--wine);flex:none}
 .ck2 .lk{font-size:inherit}
 @media (min-width:700px){.auth{justify-content:center}.auth-in{background:color-mix(in srgb,var(--surface) 70%,transparent);border-radius:32px;padding:36px;max-width:500px;box-shadow:var(--shadow)}.auth-top{max-width:500px}}
-@media (max-width:900px){
-  .nav{display:none;position:absolute;left:0;right:0;top:100%;background:var(--bg);border-bottom:1px solid var(--line);flex-direction:column;gap:2px;padding:10px max(20px,env(safe-area-inset-left,0px)) 16px;justify-content:flex-start}
-  .nav.open{display:flex}
-  .nav button{text-align:left;padding:12px 14px}
-  .nav .only-m{display:block}
-  .menu-btn{display:grid}
-  .hdr-r{margin-left:auto}
-  .pf{grid-template-columns:minmax(0,1fr)}
-}
+@media (max-width:1023px){.pf{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:560px){
-  .hdr .wrap{gap:10px}
-  .hdr-r .btn{display:none}
-  .logo{font-size:25px}
-  .hero{padding-top:40px}
-  .hero.home{padding-top:56px}
   .sec-h{margin-top:44px}
   .sec-h h2{font-size:26px}
   .card{padding:22px}
@@ -299,10 +286,8 @@ tr:last-child td{border-bottom:0}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 
 /* ===== Estilo aplicativo (home, configurar perfil, abas) ===== */
-.app{max-width:520px;margin:0 auto;min-height:100vh;min-height:100dvh;background:var(--bg);position:relative;padding:0 20px calc(110px + env(safe-area-inset-bottom,0px))}
+.app{max-width:640px;margin:0 auto;min-height:100vh;min-height:100dvh;background:var(--bg);position:relative;padding:0 20px calc(110px + env(safe-area-inset-bottom,0px))}
 .app.nobar{padding-bottom:calc(40px + env(safe-area-inset-bottom,0px))}
-body.appmode{background:var(--surface2)}
-body.appmode .toast{bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 .ap-top{position:sticky;top:0;z-index:20;margin:0 -20px;padding:calc(8px + env(safe-area-inset-top,0px)) 14px 8px;background:color-mix(in srgb,var(--surface) 94%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:68px}
 .ap-logo{display:flex;flex-direction:column;align-items:center;text-align:center;line-height:1.1}
 .ap-logo .pinlogo svg{width:26px}
@@ -426,11 +411,10 @@ body.appmode .toast{bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 .xmenu button:first-child{border-top:0}.xmenu button span{flex:1}.xmenu button>svg:last-child{color:var(--muted)}
 .xmenu button svg:first-child{color:var(--wine)}
 .xmenu .out,.xmenu .out svg{color:var(--bad)!important}
-.tabbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(12px + env(safe-area-inset-bottom,0px));width:min(calc(100% - 28px),492px);display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--surface);border-radius:30px;padding:8px;box-shadow:0 10px 36px rgba(74,14,36,.18);z-index:30}
+.tabbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(12px + env(safe-area-inset-bottom,0px));width:min(calc(100% - 28px),612px);display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--surface);border-radius:30px;padding:8px;box-shadow:0 10px 36px rgba(74,14,36,.18);z-index:30}
 .tabbar button{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:0;border-radius:22px;padding:9px 2px;color:var(--muted);font-size:11.5px;font-weight:500;min-width:0}
 .tabbar button svg{width:24px;height:24px}
 .tabbar button[aria-current="page"]{background:var(--soft);color:var(--wine)}
-@media (min-width:700px){.app{box-shadow:0 0 0 1px var(--line);margin-top:0}}
 
 /* ===== Direção visual do cliente: ameixa profundo, rosé, off-white, tipografia fina ===== */
 :root{--hdr:#4A0E24;--rose-m:#D4A798}
@@ -457,7 +441,6 @@ body.appmode .toast{bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 .auth-logo b{font-weight:300;text-transform:uppercase;letter-spacing:.12em;font-size:32px}
 .auth-logo small{letter-spacing:.14em;text-transform:uppercase;font-size:11px}
 .pinlogo svg{width:78px}.pinlogo.sm svg{width:44px}
-@media (max-width:560px){.hero::after{display:none}.hdr .logo{font-size:21px}}
 /* app (celular) */
 .ap-top{background:var(--hdr);border-bottom:0;backdrop-filter:none;color:#fff;min-height:62px}
 .ap-top .ap-back{color:#fff}
@@ -491,8 +474,130 @@ body.appmode .toast{bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 .tabbar button[aria-current="page"]{background:var(--hdr);color:#fff}
 .xsec h2{letter-spacing:.14em}
 .ap-who b{font-family:var(--display);font-weight:500;font-size:26px}
+
+/* ===================== RESPONSIVO: celular (app) x computador (site) =====================
+   html[data-dev="m"] = celular/tablet em pé (app, barra inferior)   html[data-dev="d"] = computador (site, menu no topo) */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{min-height:100vh;min-height:100dvh}
+img,svg{max-width:100%}
+.mt40{margin-top:40px}.narrow{max-width:760px}
+.pg-h1{font-size:46px}
+.hdr .logo,.ftr .logo{display:inline-flex;align-items:center;gap:12px}
+.hdr .logo .pinlogo,.ftr .logo .pinlogo{color:var(--rose-m)}
+.hdr .logo .pinlogo svg,.ftr .logo .pinlogo svg{width:40px}
+@media (hover:hover){.pc:hover{border-color:var(--rose);box-shadow:var(--shadow)}.tile:hover{border-color:var(--rose)}.xchip:hover{border-color:var(--rose)}}
+
+/* ---------- COMPUTADOR ---------- */
+html[data-dev="d"] .wrap{max-width:1200px;padding-left:max(40px,env(safe-area-inset-left,0px));padding-right:max(40px,env(safe-area-inset-right,0px))}
+html[data-dev="d"] .hdr .wrap{min-height:76px;gap:28px}
+html[data-dev="d"] .nav{gap:4px}
+html[data-dev="d"] .hdr-r{gap:14px}
+html[data-dev="d"] .acc{position:relative}
+html[data-dev="d"] .accb{display:inline-flex;align-items:center;gap:10px;background:transparent;border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:999px;padding:4px 14px 4px 4px;min-height:44px}
+html[data-dev="d"] .accb:hover{background:rgba(255,255,255,.1)}
+html[data-dev="d"] .accb .av{width:36px;height:36px;font-size:13px;background:var(--rose-m);color:var(--hdr)}
+html[data-dev="d"] .accb .nm{font-size:14.5px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html[data-dev="d"] .accb svg{transform:rotate(90deg);width:.95em;height:.95em}
+html[data-dev="d"] .pop{position:absolute;right:0;top:calc(100% + 10px);width:268px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:18px;box-shadow:0 18px 50px rgba(43,10,24,.22);padding:8px;z-index:60}
+html[data-dev="d"] .pop[hidden]{display:none}
+html[data-dev="d"] .pop button{display:flex;align-items:center;gap:12px;width:100%;background:none;border:0;border-radius:12px;padding:11px 12px;text-align:left;font-size:15px;color:var(--ink)}
+html[data-dev="d"] .pop button svg{color:var(--wine);width:1.25em;height:1.25em}
+html[data-dev="d"] .pop button:hover{background:var(--soft)}
+html[data-dev="d"] .pop hr{border:0;border-top:1px solid var(--line);margin:6px 4px}
+html[data-dev="d"] .pop .out,html[data-dev="d"] .pop .out svg{color:var(--bad)}
+@media (min-width:1024px) and (max-width:1199px){.nav button{padding:8px 10px;letter-spacing:.1em}.hdr .wrap{gap:18px!important}.accb .nm{display:none}.accb{padding-right:4px!important}}
+html[data-dev="d"] .hero{padding:72px 0 28px}
+html[data-dev="d"] .hero h1{font-size:clamp(48px,5vw,68px)}
+html[data-dev="d"] .list{max-width:none;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));align-items:start;margin-top:44px}
+html[data-dev="d"] .stack.narrow{max-width:860px}
+/* home */
+html[data-dev="d"] .ap-hero{margin:36px 0 14px;padding:56px 64px 52px;border-radius:32px}
+html[data-dev="d"] .ap-hero h1{font-size:80px}
+html[data-dev="d"] .ap-hero p{font-size:19px;margin-bottom:28px}
+html[data-dev="d"] .ap-hero .lash{width:min(560px,46%);right:32px;top:6px;opacity:.16}
+html[data-dev="d"] .ap-hero .ap-search{max-width:640px}
+html[data-dev="d"] .ap-sh{margin:34px 0 16px}
+html[data-dev="d"] .ap-sh h2{font-size:26px}
+html[data-dev="d"] .tiles{grid-template-columns:repeat(8,minmax(0,1fr));gap:12px;margin-bottom:26px}
+html[data-dev="d"] .tile{padding:20px 6px 14px;gap:10px;cursor:pointer}
+html[data-dev="d"] .tile .tl{font-size:13px}
+html[data-dev="d"] .sorts{flex-wrap:wrap;overflow:visible;margin:0 0 6px;padding:4px 0 8px}
+html[data-dev="d"] .pcs{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:18px;align-items:start}
+html[data-dev="d"] .pc{padding:18px}
+html[data-dev="d"] .pc-b h3{font-size:22px}
+html[data-dev="d"] .lk2{display:none}
+html[data-dev="d"] .ap-pro{max-width:560px;margin-top:20px}
+html[data-dev="d"] .ap-empty{grid-column:1/-1}
+/* configurar perfil / perfil / listas no computador */
+html[data-dev="d"] .xform{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 72px;align-items:start;margin-top:8px}
+html[data-dev="d"] .ap-who{margin-top:36px}
+html[data-dev="d"] .ap-who.left{margin-top:0}
+html[data-dev="d"] .xtip{max-width:620px;margin:8px auto 22px}
+html[data-dev="d"] .xfinish{display:block;max-width:420px;margin:0 auto 12px}
+html[data-dev="d"] .pf2{display:grid;grid-template-columns:340px minmax(0,1fr);grid-template-areas:"a b" "c b";gap:8px 56px;align-items:start;margin-top:44px}
+html[data-dev="d"] .pf2-a{grid-area:a;background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:28px 22px 24px}
+html[data-dev="d"] .pf2-b{grid-area:b}
+html[data-dev="d"] .pf2-c{grid-area:c}
+html[data-dev="d"] .pf2-c .xsec{margin-top:18px}
+html[data-dev="d"] main>.pcs{margin-top:44px}
+html[data-dev="d"] main>.ap-empty{margin-top:40px}
+html[data-dev="d"] .su{margin-top:56px}
+html[data-dev="d"] .xrow .uf{width:110px}
+html[data-dev="d"] .ftr{margin-top:96px}
+html[data-dev="d"] .sheet{max-width:640px}
+
+/* ---------- CELULAR / TABLET EM PÉ ---------- */
+html[data-dev="m"] body{background:var(--surface2)}
+html[data-dev="m"] .app{box-shadow:0 0 0 1px var(--line)}
+html[data-dev="m"] .app .wrap{max-width:none;padding:0}
+html[data-dev="m"] .ap-hero{margin:0 -20px 4px}
+html[data-dev="m"] .toast{bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+html[data-dev="m"] .app.nobar~.toast,html[data-dev="m"] body:has(.app.nobar) .toast{bottom:calc(24px + env(safe-area-inset-bottom,0px))}
+html[data-dev="m"] .ap-title{font-size:34px;margin:22px 0 4px}
+html[data-dev="m"] .ap-sub{font-size:16px;margin-bottom:18px}
+html[data-dev="m"] .app .ap-search{border:1px solid var(--line);margin-bottom:18px}
+html[data-dev="m"] .app .mt40{margin-top:14px}
+html[data-dev="m"] .app .list{margin-top:6px;max-width:none}
+html[data-dev="m"] .app .sec-h{margin:30px 0 12px}
+html[data-dev="m"] .app .sec-h h2{font-size:20px}
+html[data-dev="m"] .app .card{padding:20px}
+html[data-dev="m"] .app .card h3{font-size:26px}
+html[data-dev="m"] .app .cta{margin:34px 0 8px;padding:22px}
+html[data-dev="m"] .app .cta h3{font-size:26px}
+html[data-dev="m"] .app .cta .btn{width:100%}
+html[data-dev="m"] .app .su{margin:12px auto 0}
+html[data-dev="m"] .app .su-card{padding:22px;border-radius:20px}
+html[data-dev="m"] .app .su-card h2{font-size:32px}
+html[data-dev="m"] .app .pf{margin-top:16px;gap:20px}
+html[data-dev="m"] .app .pf-hero h1{font-size:34px}
+html[data-dev="m"] .app .adm-warn{margin:8px 0 18px}
+html[data-dev="m"] .app .pg-h1{font-size:34px}
+html[data-dev="m"] .app .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+html[data-dev="m"] .app .empty-state{padding:28px 18px}
+html[data-dev="m"] .app .row-card{padding:14px}
+html[data-dev="m"] .m-legal{margin:34px 0 4px;padding-top:18px;border-top:1px solid var(--line)}
+html[data-dev="m"] .m-legal ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px 18px}
+html[data-dev="m"] .m-legal button{background:none;border:0;padding:6px 0;color:var(--muted);font-size:13.5px}
+html[data-dev="m"] .m-legal .legal{margin-top:10px}
+html[data-dev="m"] .xfinish{margin-top:6px}
+/* janelas viram "folha" que sobe de baixo */
+html[data-dev="m"] .ov{align-items:end;padding:0}
+html[data-dev="m"] .sheet{max-width:640px;max-height:92vh;max-height:92dvh;border-radius:26px 26px 0 0;animation:sheetup .24s ease-out;padding-bottom:env(safe-area-inset-bottom,0px)}
+html[data-dev="m"] .sheet .body{padding:30px 22px 24px}
+@keyframes sheetup{from{transform:translateY(36px);opacity:0}to{transform:none;opacity:1}}
+@media (max-width:380px){
+  html[data-dev="m"] .app{padding-left:16px;padding-right:16px}
+  html[data-dev="m"] .ap-top,html[data-dev="m"] .ap-hero{margin-left:-16px;margin-right:-16px}
+  html[data-dev="m"] .ap-hero{padding-left:20px;padding-right:20px}
+  .ap-hero h1{font-size:46px}
+  .tile .tl{font-size:10.5px}
+  .tabbar button{font-size:10.5px}
+}
+@media (prefers-reduced-motion:reduce){.sheet{animation:none!important}}
 </style>
 
+</head>
+<body>
 <div id="app"></div>
 <div id="ov" class="ov" hidden></div>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -566,6 +671,13 @@ const SEED_REGS = [
 const SEED_REVIEWS = [
  {id:'v1',alvo:'Helena Duarte',autor:'Mariana Silva',nota:5,texto:'Atendimento impecável, resultado incrível.',status:'pendente'}
 ];
+
+/* ===== Dispositivo: celular (app) ou computador (site) =====
+   O site escolhe a "casca" pela largura da tela e troca sozinho se a janela mudar (girar o celular, redimensionar). */
+const MQ=matchMedia('(min-width:1024px)');
+const DESK=()=>MQ.matches;
+const setDev=()=>{document.documentElement.dataset.dev=DESK()?'d':'m'};
+setDev();
 
 /* ===== Utilidades ===== */
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
@@ -722,35 +834,63 @@ function lashArc(){
   }
   return `<svg class="lash" viewBox="0 0 400 200" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="${lid}"/><path d="${l}"/></g></svg>`;
 }
-const brand=()=>`<button class="logo" data-go="home" aria-label="Beauty Hub, início">Beauty Hub</button>`;
+const brand=()=>`<button class="logo" data-go="home" aria-label="Beauty Hub, início">${logoMark(true)}<span>Beauty Hub</span></button>`;
 
-/* ===== Estrutura: cabeçalho, rodapé, topo das páginas ===== */
+/* ===== Estrutura: cabeçalho, rodapé, topo das páginas =====
+   As páginas têm um só conteúdo e duas "cascas": computador (site, menu no topo) e celular (app, barra inferior).
+   header() abre a casca e footer() fecha. O que fica no meio é o mesmo e se ajusta por CSS. */
 const app=()=>$('#app');
-function header(route){
-  const cur=NAV_OF[route]||'';
-  return `<header class="hdr"><div class="wrap">
-   ${brand()}
-   <nav class="nav" id="nav" aria-label="Principal">${NAV.map(([r,l])=>`<button data-go="${r}" ${cur===r?'aria-current="page"':''}>${l}</button>`).join('')}<button class="only-m" data-go="${S.user?'meu-perfil':'cadastro'}">${S.user?'Meu perfil':'Criar perfil'}</button><button class="only-m" data-logout>Sair</button></nav>
+const TAB_OF={home:'home',agendamentos:'agendamentos',mensagens:'mensagens',perfil:'perfil'};
+let SHELL='',SHELLBAR=true;
+function header(route,o={}){SHELL=route;SHELLBAR=!o.nobar;return DESK()?deskHeader(route,o):mobHeader(route,o)}
+
+function deskHeader(route,o={}){
+  if(o.nobar||needSetup())return `<header class="hdr"><div class="wrap">${brand()}<div class="hdr-r"><button class="btn sm" data-logout>Sair da conta</button></div></div></header>`;
+  const cur=NAV_OF[route]||'',a=myAcc()||{},nm=firstName()||'Conta';
+  const items=[['perfil','Meu perfil','user'],['agendamentos','Agendamentos','cal'],['mensagens','Mensagens','chat'],['favoritos','Favoritos','heart'],[S.user?'meu-perfil':'cadastro',S.user?'Meu plano e divulgação':'Criar perfil profissional','star']];
+  return `<header class="hdr"><div class="wrap">${brand()}
+   <nav class="nav" id="nav" aria-label="Principal">${NAV.map(([r,l])=>`<button data-go="${r}" ${cur===r?'aria-current="page"':''}>${l}</button>`).join('')}</nav>
    <div class="hdr-r">
     <button class="ib" data-go="favoritos" aria-label="Favoritos">${ic('heart')}${S.favs.length?`<span class="cnt">${S.favs.length}</span>`:''}</button>
-    <button class="btn sm" data-go="${S.user?'meu-perfil':'cadastro'}">${S.user?'Meu perfil':'Criar perfil'}</button>
-    <button class="ib out" data-logout aria-label="Sair da conta" title="Sair">${ic('out')}</button>
-    <button class="ib menu-btn" data-menu aria-label="Abrir menu" aria-expanded="false">${ic('menu')}</button>
+    <div class="acc"><button class="accb" data-acc aria-haspopup="true" aria-expanded="false"><span class="av">${esc(initials(a.nome||nm))}</span><span class="nm">${esc(nm)}</span>${ic('chev')}</button>
+     <div class="pop" id="acc-pop" hidden>${items.map(([r,t,i])=>`<button data-go="${r}">${ic(i)}<span>${t}</span></button>`).join('')}<hr><button data-logout class="out">${ic('out')}<span>Sair da conta</span></button></div></div>
    </div></div></header>`;
 }
-function footer(){
-  const L=(t,k)=>`<li><button data-info="${k}">${t}</button></li>`;
+function mobHeader(route,o={}){
+  const main=TAB_OF[route]!==undefined,setup=route==='configurar-perfil';
+  const bar=main
+   ?`${logoRow()}<div class="ap-act"><button class="ib" data-xnotif aria-label="Notificações">${ic('bell')}</button><button class="ib" data-xmore aria-label="Mais opções">${ic('dots')}</button></div>`
+   :`<button class="ap-back" ${setup?'data-xback':'data-back'} aria-label="${setup&&needSetup()?'Sair da conta':'Voltar'}">${ic('back')}</button>${logoRow()}<span class="ap-sp"></span>`;
+  return `<div class="app ${o.nobar?'nobar':''}"><header class="ap-top ${main?'home':''}">${bar}</header>`;
+}
+
+const LEGAL=[['Sobre','sobre'],['Dúvidas frequentes','faq'],['Termos de uso','termos'],['Privacidade','priv'],['Contato','contato']];
+function deskFooter(){
+  const L=([t,k])=>`<li><button data-info="${k}">${t}</button></li>`;
   return `<footer class="ftr"><div class="wrap"><div class="ftr-row">${brand()}
-   <ul class="ftr-links">${L('Sobre','sobre')}${L('Dúvidas frequentes','faq')}${L('Termos de uso','termos')}${L('Privacidade','priv')}${L('Contato','contato')}<li><button data-go="admin">Painel administrativo</button></li></ul></div>
+   <ul class="ftr-links">${LEGAL.map(L).join('')}<li><button data-go="admin">Painel administrativo</button></li></ul></div>
    <p class="legal">© 2026 Beauty Hub · Protótipo com dados fictícios.</p></div></footer>`;
 }
-function hero({title,sub,search,q,ph,home}){
+function mobLegal(){
+  return `<footer class="m-legal"><ul>${LEGAL.map(([t,k])=>`<li><button data-info="${k}">${t}</button></li>`).join('')}<li><button data-go="admin">Painel administrativo</button></li></ul><p class="legal">© 2026 Beauty Hub · Protótipo com dados fictícios.</p></footer>`;
+}
+function footer(){
+  if(DESK())return deskFooter();
+  const main=TAB_OF[SHELL]!==undefined;
+  return `${main||!SHELLBAR?'':mobLegal()}${SHELLBAR?tabbar(TAB_OF[SHELL]||''):''}</div>`;
+}
+
+function deskHero({title,sub,search,q,ph,home}){
   return `<section class="hero ${home?'home':''}">${home?lashArc():''}<div class="wrap">
    <h1>${title}</h1><p class="sub">${sub}</p>
    ${search?`<form class="search" id="q-form" role="search">${ic('search')}<input id="q" type="search" placeholder="${esc(ph||'Buscar no Beauty Hub')}" value="${esc(q||'')}" aria-label="Buscar"><button class="btn sm" type="submit">Buscar</button></form>`:''}
    ${home?`<div class="hero-act"><button class="btn" data-go="${S.user?'meu-perfil':'cadastro'}">${S.user?'Meu perfil':'Criar meu perfil'} ${ic('arrow')}</button><button class="btn ghost" data-go="network">Conhecer a comunidade</button></div>`:''}
   </div></section>`;
 }
+function mobHero({title,sub,search,q,ph}){
+  return `<h1 class="ap-title">${title}</h1>${sub?`<p class="ap-sub">${sub}</p>`:''}${search?`<form class="ap-search" id="q-form" role="search">${ic('search')}<input id="q" type="search" placeholder="${esc(ph||'Buscar no Beauty Hub')}" value="${esc(q||'')}" aria-label="Buscar"><button class="fl" type="submit" aria-label="Buscar">${ic('arrow')}</button></form>`:''}`;
+}
+const hero=o=>DESK()?deskHero(o):mobHero(o);
 function ctaBand(c){
   return `<section class="cta"><div><h3>${c.title}</h3><p>${c.text}</p></div><button class="btn" data-signup="${c.tipo}">${c.btn} ${ic('arrow')}</button></section>`;
 }
@@ -767,7 +907,7 @@ function modPage(k){
 function mercadoPage(){
   const ks=['lojas','marcas','tecnologia','campeonatos'];
   app().innerHTML=header('mercado')+hero({title:'Mercado',sub:'Lojas, marcas, tecnologia e campeonatos reunidos em um só lugar.'})+
-  `<main class="wrap"><div class="mod-grid" style="margin-top:40px">${ks.map(k=>tile(k,MODS[k].sub)).join('')}</div></main>`+footer();
+  `<main class="wrap"><div class="mod-grid mt40">${ks.map(k=>tile(k,MODS[k].sub)).join('')}</div></main>`+footer();
 }
 
 /* ===== Busca, favoritos, radar ===== */
@@ -785,17 +925,17 @@ function searchPage(){
   const items=words.length?ALL.filter(visible).filter(i=>words.every(w=>hay(i).includes(w))):[];
   const pros=words.length?PROS.filter(p=>words.every(w=>hay(p).includes(w))):[];
   app().innerHTML=header('busca')+hero({title:'Busca',sub:q?`Resultados para “${esc(q)}”`:'Digite um termo para buscar.',search:true,q})+
-  `<main class="wrap">${items.length+pros.length?resultsBlock(items,pros):`<div style="margin-top:40px">${empty(q?'Nada encontrado. Tente outra palavra, como uma técnica ou o nome de uma cidade.':'Use o campo acima para buscar em todo o Beauty Hub.')}</div>`}</main>`+footer();
+  `<main class="wrap">${items.length+pros.length?resultsBlock(items,pros):`<div class="mt40">${empty(q?'Nada encontrado. Tente outra palavra, como uma técnica ou o nome de uma cidade.':'Use o campo acima para buscar em todo o Beauty Hub.')}</div>`}</main>`+footer();
 }
 function favPage(){
   const items=S.favs.map(byId).filter(x=>x&&x.mod);const pros=S.favs.map(byId).filter(x=>x&&x.tipo);
   app().innerHTML=header('favoritos')+hero({title:'Favoritos',sub:'O que você salvou para consultar depois.'})+
-  `<main class="wrap">${items.length+pros.length?resultsBlock(items,pros):`<div style="margin-top:40px">${empty('Você ainda não salvou nada. Toque no coração de um curso, evento, loja ou perfil para guardar aqui.')}</div>`}</main>`+footer();
+  `<main class="wrap">${items.length+pros.length?resultsBlock(items,pros):`<div class="mt40">${empty('Você ainda não salvou nada. Toque no coração de um curso, evento, loja ou perfil para guardar aqui.')}</div>`}</main>`+footer();
 }
 function radarPage(){
   const rows=ALL.filter(i=>i.date&&visible(i)&&daysTo(i.end||i.date)>=0).sort((a,b)=>a.date.localeCompare(b.date));
   app().innerHTML=header('radar')+hero({title:'Radar',sub:'O que vem por aí: eventos, cursos, campeonatos e encontros, em ordem de data.'})+
-  `<main class="wrap"><div class="stack" style="margin-top:40px;max-width:720px">${rows.length?rows.map(i=>{const d=pd(i.date);return `<div class="row-card" data-open="${i.id}" style="cursor:pointer"><div class="dt"><b>${d.getDate()}</b><span>${MON[d.getMonth()]}</span></div><div style="flex:1;min-width:0"><h3>${esc(i.title)}</h3><small>${MOD_NAME[i.mod]} · ${esc(i.city)} · ${inDays(i.date)}</small></div><button class="btn sm ghost" data-open="${i.id}">Ver</button></div>`}).join(''):empty('Nenhuma data por enquanto.')}</div></main>`+footer();
+  `<main class="wrap"><div class="stack mt40 narrow">${rows.length?rows.map(i=>{const d=pd(i.date);return `<div class="row-card" data-open="${i.id}" style="cursor:pointer"><div class="dt"><b>${d.getDate()}</b><span>${MON[d.getMonth()]}</span></div><div style="flex:1;min-width:0"><h3>${esc(i.title)}</h3><small>${MOD_NAME[i.mod]} · ${esc(i.city)} · ${inDays(i.date)}</small></div><button class="btn sm ghost" data-open="${i.id}">Ver</button></div>`}).join(''):empty('Nenhuma data por enquanto.')}</div></main>`+footer();
 }
 
 /* ===== Network ===== */
@@ -804,7 +944,7 @@ function netPage(){
   app().innerHTML=header('network')+hero({title:'Network',sub:'Conecte-se com profissionais, participe de encontros e troque experiências.'})+
   `<main class="wrap">
    ${secH('Comunidade')}<div class="grid">${proCard(PROS[0])}${m?`<article class="card" data-open="${m.id}"><span class="badge">${m.cat}</span><h3><button data-open="${m.id}">${esc(m.title)}</button></h3><p>${esc(m.desc)}</p><ul class="meta"><li>${ic('cal')}${fd(m.date)}</li><li>${ic('pin')}${esc(m.city)}</li></ul><div class="card-f"><small style="color:var(--muted)">+${m.going+(mj?1:0)} confirmados</small><button class="btn sm" data-meet="${m.id}" aria-pressed="${mj}">${mj?'Participação confirmada':'Quero participar'}</button></div></article>`:''}</div>
-   ${secH('Conversas')}<div class="stack" style="max-width:720px">
+   ${secH('Conversas')}<div class="stack narrow">
     <div class="row-card"><div class="av">${ic('users')}</div><div class="grow mini" style="flex:1;min-width:0"><div class="grow"><b>${g.name}</b><small>${(g.members+(j?1:0)).toLocaleString('pt-BR')} membros</small></div></div><button class="btn sm ${j?'':'ghost'}" data-group="${g.id}" aria-pressed="${j}">${j?'Participando':'Entrar'}</button></div>
     <div class="row-card" data-thread="${t.id}" style="cursor:pointer"><div class="av">${initials(t.by)}</div><div style="flex:1;min-width:0"><h3>${esc(t.q)}</h3><small>${esc(t.by)} · ${t.when} · ${t.replies.length+(S.replies[t.id]||[]).length} respostas</small></div></div></div>
    ${ctaBand({title:'Você é profissional da área?',text:'Crie seu perfil, seja encontrada e conecte-se com profissionais de todo o Brasil.',btn:'Criar perfil',tipo:'profissional'})}</main>`+footer();
@@ -939,7 +1079,7 @@ function finishSignup(){
 let PT='sobre';
 function meuPerfil(){
   const u=S.user;
-  if(!u){app().innerHTML=header('meu-perfil')+`<main class="wrap"><div class="empty-state" style="margin-top:40px"><h2 style="font-size:34px;color:var(--ink)">Você ainda não tem um perfil</h2><p>Faça o cadastro em 4 passos e escolha um plano para aparecer no Beauty Hub.</p><button class="btn" data-go="cadastro">Criar meu perfil ${ic('arrow')}</button></div></main>`+footer();return}
+  if(!u){app().innerHTML=header('meu-perfil')+`<main class="wrap"><div class="empty-state mt40"><h2 style="font-size:34px;color:var(--ink)">Você ainda não tem um perfil</h2><p>Faça o cadastro em 4 passos e escolha um plano para aparecer no Beauty Hub.</p><button class="btn" data-go="cadastro">Criar meu perfil ${ic('arrow')}</button></div></main>`+footer();return}
   const P=PLANS()[u.plano],x=P.perms,tipo=PROFILE_TYPES.find(t=>t.id===u.tipo);
   const stMap={pendente:['Em análise',''],aprovado:['Aprovado','ok'],recusado:['Recusado','bad'],suspenso:['Suspenso','bad']};
   const [stT,stC]=stMap[u.status]||stMap.pendente;
@@ -1004,7 +1144,7 @@ function startSession(acc){S.session=acc.id;S.user=S.profiles[acc.id]||null;save
 function logout(){S.session=null;S.user=null;save();closeSheet();go('entrar')}
 
 /* ----- visual ----- */
-const logoMark=(sm)=>`<span class="pinlogo ${sm?'sm':''}"><svg viewBox="0 0 64 52" aria-hidden="true"><text x="32" y="42" text-anchor="middle" font-family="'Cormorant Garamond',Georgia,serif" font-size="50" font-weight="300" letter-spacing="-7" fill="currentColor">HB</text></svg></span>`;
+const logoMark=(sm)=>`<span class="pinlogo ${sm?'sm':''}"><svg viewBox="0 0 64 52" aria-hidden="true"><text x="32" y="42" text-anchor="middle" font-family="'Cormorant Garamond',Georgia,serif" font-size="50" font-weight="300" letter-spacing="-7" fill="currentColor">BH</text></svg></span>`;
 const bubbles='<i class="bubble b1"></i><i class="bubble b2"></i><i class="bubble b3"></i><i class="bubble b4"></i>';
 const fld=(id,label,icon,attrs,err,extra='')=>`<div class="af"><label for="${id}">${label}</label><div class="inp ${err?'bad':''}">${ic(icon)}<input id="${id}" ${attrs}>${extra}</div>${err?`<div class="err" role="alert">${err}</div>`:''}</div>`;
 const eyeBtn=`<button type="button" class="eye" data-eye aria-label="Mostrar senha">${ic('eye')}</button>`;
@@ -1160,10 +1300,6 @@ function tabbar(cur){
  const T=[['home','home','Home'],['agendamentos','cal','Agendamentos'],['mensagens','chat','Mensagens'],['perfil','user','Perfil']];
  return `<nav class="tabbar" aria-label="Principal">${T.map(([r,i,l])=>`<button data-go="${r}" ${cur===r?'aria-current="page"':''}>${ic(i)}<span>${l}</span></button>`).join('')}</nav>`;
 }
-function topbar(home){
- return `<header class="ap-top ${home?'home':''}">${home?logoRow():`<button class="ap-back" data-xback aria-label="${needSetup()?'Sair da conta':'Voltar'}">${ic('back')}</button>${logoRow()}<span class="ap-sp"></span>`}${home?`<div class="ap-act"><button class="ib" data-xnotif aria-label="Notificações">${ic('bell')}</button><button class="ib" data-xmore aria-label="Mais opções">${ic('dots')}</button></div>`:''}</header>`;
-}
-
 /* ===================== CONFIGURAR PERFIL ===================== */
 let P=null,PE={},SUG={},srchT,cepT;
 function newSetup(){
@@ -1224,15 +1360,14 @@ function setupPage(keep,focusNum){
  const y=window.scrollY;
  if(!keep||!P){P=newSetup();PE={}}
  const a=myAcc()||{},pro=isPro(a),edit=!needSetup();
- app().innerHTML=`<div class="app nobar">${topbar(false)}
-  <h1 class="ap-title">${edit?'Editar perfil':'Complete seu cadastro'}</h1>
-  <p class="ap-sub">${edit?'Atualize seus dados quando quiser.':pro?'Precisamos de mais alguns dados para publicar o seu perfil profissional.':'Precisamos de mais alguns dados para liberar o app.'}</p>
+ const sub=edit?'Atualize seus dados quando quiser.':pro?'Precisamos de mais alguns dados para publicar o seu perfil profissional.':'Precisamos de mais alguns dados para liberar o app.';
+ app().innerHTML=header('configurar-perfil',{nobar:true})+hero({title:edit?'Editar perfil':'Complete seu cadastro',sub})+`<main class="wrap">
   <div class="ap-who"><label class="ap-photo" for="x-photo">${avatarHTML(P.photo,'','xl')}<span class="cam">${ic('camera')}</span><input id="x-photo" type="file" accept="image/*" hidden></label>
    <b>${esc(a.nome||'')}</b><span class="pill">${ic(pro?'eyel':'user')}${pro?'Profissional':'Cliente'}</span><small>${esc(a.doc||'')}</small></div>
-  <section class="xsec"><h2>Endereço</h2><p class="xd">Ative sua localização ou busque seu endereço, depois confirme o número.</p>${addrBlock('')}</section>
-  ${pro?proSections():`<section class="xsec"><h2>Estilos que você gosta</h2><p class="xd">Opcional. Ajuda a encontrar profissionais para o seu tipo de olhar.</p>${chips(PREFS.map(x=>[x,x]),P.pref,'data-xpref')}</section>`}
+  <div class="xform"><section class="xsec"><h2>Endereço</h2><p class="xd">Ative sua localização ou busque seu endereço, depois confirme o número.</p>${addrBlock('')}</section>
+  ${pro?proSections():`<section class="xsec"><h2>Estilos que você gosta</h2><p class="xd">Opcional. Ajuda a encontrar profissionais para o seu tipo de olhar.</p>${chips(PREFS.map(x=>[x,x]),P.pref,'data-xpref')}</section>`}</div>
   <div class="xtip">${ic('eyel')}<p>${pro?'Depois de concluir, adicione fotos dos seus trabalhos no perfil. Elas fazem toda a diferença para novas clientes.':'Depois de concluir, salve suas profissionais favoritas e solicite um horário direto pelo app.'}</p></div>
-  <button class="abtn xfinish" data-xfinish>${edit?'Salvar alterações':'Concluir cadastro'}</button></div>`;
+  <button class="abtn xfinish" data-xfinish>${edit?'Salvar alterações':'Concluir cadastro'}</button></main>`+footer();
  window.scrollTo(0,y);
  if(focusNum)$('#x-num')?.focus();
 }
@@ -1353,14 +1488,14 @@ function proCardApp(p){
   <div class="pc-r"><button class="pc-fav ${f?'on':''}" data-fav="${p.id}" aria-pressed="${f}" aria-label="${f?'Remover dos favoritos':'Salvar nos favoritos'}">${ic('heart')}</button>${mp<1e9?`<small>a partir de</small><b>${brl0(mp)}</b>`:''}</div></article>`;
 }
 function homeListHTML(){
- const L=homeList(),show=H.all?L:L.slice(0,4);
+ const L=homeList(),show=(H.all||DESK())?L:L.slice(0,4);
  const emp=H.cat?'Nenhuma profissional nesta categoria por enquanto.':H.sort==='fav'?'Você ainda não favoritou ninguém. Toque no coração de uma profissional para salvar.':'Nenhuma profissional encontrada.';
- return (show.length?show.map(proCardApp).join(''):`<div class="ap-empty">${ic('eyel')}<p>${emp}</p></div>`)+(!H.all&&L.length>4?`<button class="btn ghost ap-more" data-xall>Ver todas (${L.length})</button>`:'');
+ return (show.length?show.map(proCardApp).join(''):`<div class="ap-empty">${ic('eyel')}<p>${emp}</p></div>`)+(!H.all&&!DESK()&&L.length>4?`<button class="btn ghost ap-more" data-xall>Ver todas (${L.length})</button>`:'');
 }
 function homePage(){
  const a=myAcc()||{},pro=isPro(a),st=mySetup(),cur=CATS.find(c=>c[0]===H.cat);
  const sorts=[['near','Perto de você'],['fav','Favoritos'],['price','Preço (menor)'],['rate','Melhor avaliação']];
- app().innerHTML=`<div class="app">${topbar(true)}
+ app().innerHTML=header('home')+`<main class="wrap">
   <section class="ap-hero">${lashArc()}<span class="kk">${greet()}</span><h1>${esc(firstName())}</h1>
    <p>${pro?'Como está o seu estúdio hoje?':'Encontre quem cuida do seu olhar.'}</p>
    <div class="ap-search">${ic('search')}<input id="x-q" type="search" placeholder="Buscar serviço ou profissional" value="${esc(H.q)}" aria-label="Buscar serviço ou profissional"><button class="fl" data-xfilter aria-label="Filtros">${ic('sliders')}</button></div></section>
@@ -1369,8 +1504,7 @@ function homePage(){
   <div class="tiles">${CATS.map(([k,l,i])=>`<button class="tile" ${k[0]==='@'?`data-go="${k.slice(1)}"`:`data-xcat="${k}" aria-pressed="${H.cat===k}"`}><span class="ti">${ic(i)}</span><span class="tl">${l}</span></button>`).join('')}</div>
   <div class="xchips sorts" role="group" aria-label="Ordenar">${sorts.map(([k,l])=>`<button class="xchip lg" data-xsort="${k}" aria-pressed="${H.sort===k}">${l}</button>`).join('')}</div>
   <div class="ap-sh"><h2>${cur?cur[1]:'Especialistas em destaque'}</h2><button class="lk2" data-xall>${H.all?'Ver menos':'Ver todos'} ${ic('arrow')}</button></div>
-  <div id="x-list" class="pcs">${homeListHTML()}</div>
-  ${tabbar('home')}</div>`;
+  <div id="x-list" class="pcs">${homeListHTML()}</div></main>`+footer();
 }
 function openFilter(){
  openSheet(`${closeBtn}<div class="body"><h2>Filtros</h2><span class="xcap">Ordenar por</span>
@@ -1421,12 +1555,10 @@ function confirmBook(id){
 }
 function agendaPage(){
  const L=S.appts.filter(x=>x.acc===S.session).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
- app().innerHTML=`<div class="app">${topbar(true)}<h1 class="ap-title">Agendamentos</h1><p class="ap-sub">Seus horários solicitados.</p>
-  <div class="pcs">${L.length?L.map(x=>`<article class="pc ag"><div class="dt"><b>${pd(x.date).getDate()}</b><span>${MON[pd(x.date).getMonth()]}</span></div><div class="pc-b"><h3>${esc(x.svc)}</h3><small>${esc(x.proName)} · ${x.time} · ${brl0(x.price)}</small><div class="pc-t"><span>${x.st}</span></div></div><button class="btn sm ghost" data-xcancel="${x.id}">Cancelar</button></article>`).join(''):`<div class="ap-empty">${ic('cal')}<p>Nenhum agendamento ainda.</p><button class="btn" data-go="home">Encontrar profissional</button></div>`}</div>${tabbar('agendamentos')}</div>`;
+ app().innerHTML=header('agendamentos')+hero({title:'Agendamentos',sub:'Seus horários solicitados.'})+`<main class="wrap"><div class="pcs">${L.length?L.map(x=>`<article class="pc ag"><div class="dt"><b>${pd(x.date).getDate()}</b><span>${MON[pd(x.date).getMonth()]}</span></div><div class="pc-b"><h3>${esc(x.svc)}</h3><small>${esc(x.proName)} · ${x.time} · ${brl0(x.price)}</small><div class="pc-t"><span>${x.st}</span></div></div><button class="btn sm ghost" data-xcancel="${x.id}">Cancelar</button></article>`).join(''):`<div class="ap-empty">${ic('cal')}<p>Nenhum agendamento ainda.</p><button class="btn" data-go="home">Encontrar profissional</button></div>`}</div></main>`+footer();
 }
 function msgPage(){
- app().innerHTML=`<div class="app">${topbar(true)}<h1 class="ap-title">Mensagens</h1><p class="ap-sub">Suas conversas com profissionais.</p>
-  <div class="ap-empty">${ic('chat')}<p>Nenhuma conversa ainda. Abra o perfil de uma profissional e fale com ela pelo WhatsApp.</p><button class="btn" data-go="home">Ver profissionais</button></div>${tabbar('mensagens')}</div>`;
+ app().innerHTML=header('mensagens')+hero({title:'Mensagens',sub:'Suas conversas com profissionais.'})+`<main class="wrap"><div class="ap-empty">${ic('chat')}<p>Nenhuma conversa ainda. Abra o perfil de uma profissional e fale com ela pelo WhatsApp.</p><button class="btn" data-go="home">Ver profissionais</button></div></main>`+footer();
 }
 
 /* ===================== PERFIL (aba) ===================== */
@@ -1434,15 +1566,14 @@ function perfilPage(){
  const a=myAcc()||{},s=mySetup()||{},pro=isPro(a),wk=(s.atend==='domicilio'||s.mesmo)?s:(s.w||{});
  const row=(l,v)=>v?`<div class="fact"><small>${l}</small>${esc(v)}</div>`:'';
  const addr=o=>[o.rua&&(o.rua+', '+o.num),o.bairro,o.cidade&&(o.cidade+' - '+o.uf),o.cep].filter(Boolean).join(' · ');
- app().innerHTML=`<div class="app">${topbar(true)}
+ app().innerHTML=header('perfil')+hero({title:'Meu perfil',sub:'Seus dados e preferências.'})+`<main class="wrap"><div class="pf2"><div class="pf2-a">
   <div class="ap-who left">${avatarHTML(s.photo,a.nome,'xl')}<b>${esc(pro?(s.nomeProf||a.nome):a.nome)}</b><span class="pill">${ic(pro?'eyel':'user')}${pro?esc(s.spec||'Profissional'):'Cliente'}</span><small>${esc(a.email||'')}</small></div>
-  <div class="row-actions" style="justify-content:center"><button class="btn" data-go="configurar-perfil">Editar perfil</button></div>
-  <section class="xsec"><h2>Endereço</h2><div class="facts">${row('Endereço',addr(s))}</div></section>
+  <div class="row-actions" style="justify-content:center"><button class="btn" data-go="configurar-perfil">Editar perfil</button></div></div>
+  <div class="pf2-b"><section class="xsec"><h2>Endereço</h2><div class="facts">${row('Endereço',addr(s))}</div></section>
   ${pro?`<section class="xsec"><h2>Serviços</h2><div class="xps">${(s.services||[]).map(v=>`<div><span>${esc(v.n)}<small>${durTxt(v.d)}</small></span><b>${brl0(v.p)}</b></div>`).join('')}</div></section>
   <section class="xsec"><h2>Atendimento</h2><div class="facts">${row('Tipo',(ATEND.find(x=>x[0]===s.atend)||[])[1])}${s.atend!=='domicilio'?row('Local de trabalho',addr(wk)):''}${s.atend!=='estudio'?row('Raio a domicílio','até '+s.raio+' km'):''}${row('Horários',(s.dias||[]).map(d=>DIAS[d]).join(', ')+' · '+s.abre+' às '+s.fecha)}${row('Pagamento',(s.pagto||[]).join(', '))}${row('WhatsApp',s.wa)}${row('Instagram',s.ig?'@'+s.ig:'')}</div></section>
   <section class="xsec"><h2>Plano e divulgação</h2><p class="xd">Escolha um plano para destacar o seu perfil e liberar mais recursos.</p><button class="btn ghost" data-go="${S.user?'meu-perfil':'cadastro'}">${S.user?'Ver meu plano':'Escolher plano'}</button></section>`:`<section class="xsec"><h2>Estilos que você gosta</h2><div class="xchips">${(s.pref||[]).length?s.pref.map(x=>`<span class="xchip lg" aria-pressed="true">${esc(x)}</span>`).join(''):'<p class="xd">Nenhum estilo escolhido.</p>'}</div></section>`}
-  <section class="xsec"><div class="xmenu">${[['favoritos','Favoritos','heart'],['eventos','Eventos','cal'],['educacao','Educação','cap'],['mercado','Mercado','store'],['network','Network','users']].map(([r,t,i])=>`<button data-go="${r}">${ic(i)}<span>${t}</span>${ic('chev')}</button>`).join('')}<button data-logout class="out">${ic('out')}<span>Sair da conta</span></button></div></section>
-  ${tabbar('perfil')}</div>`;
+  </div><div class="pf2-c"><section class="xsec"><div class="xmenu">${[['favoritos','Favoritos','heart'],['eventos','Eventos','cal'],['educacao','Educação','cap'],['mercado','Mercado','store'],['network','Network','users']].map(([r,t,i])=>`<button data-go="${r}">${ic(i)}<span>${t}</span>${ic('chev')}</button>`).join('')}<button data-logout class="out">${ic('out')}<span>Sair da conta</span></button></div></section></div></div></main>`+footer();
 }
 
 /* ===================== EVENTOS ===================== */
@@ -1532,7 +1663,7 @@ function adminPage(){
     body=`<div class="tw"><table><thead><tr><th>Avaliação</th><th>Sobre</th><th>Nota</th><th>Status</th><th>Ações</th></tr></thead><tbody>${SEED_REVIEWS.map(v=>{const st=S.revStatus[v.id]||v.status;return `<tr><td><b style="font-weight:500">${esc(v.autor)}</b><br><small style="color:var(--muted)">${esc(v.texto)}</small></td><td>${esc(v.alvo)}</td><td>${v.nota}/5</td><td>${statusPill(st==='aprovada'?'aprovado':st==='removida'?'recusado':'pendente').replace('Aprovado','Aprovada').replace('Recusado','Removida')}</td><td><div class="row-actions">${st!=='aprovada'?`<button class="btn sm" data-rev="${v.id}:aprovada">Aprovar</button>`:''}${st!=='removida'?`<button class="btn sm ghost" data-rev="${v.id}:removida">Remover</button>`:''}</div></td></tr>`}).join('')}</tbody></table></div>`;
   }
   app().innerHTML=header('admin')+`<main class="wrap" style="padding-bottom:8px"><div class="adm-warn"><b>Protótipo.</b> Painel aberto para demonstração; os dados ficam só neste navegador. Na versão final, o acesso exige login de administrador.</div>
-   <h1 style="font-size:46px">Painel administrativo</h1><div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" aria-selected="${A.tab===k}" data-atab="${k}">${l}${k==='cad'&&pend?` (${pend})`:''}</button>`).join('')}</div>${body}</main>`+footer();
+   <h1 class="pg-h1">Painel administrativo</h1><div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" aria-selected="${A.tab===k}" data-atab="${k}">${l}${k==='cad'&&pend?` (${pend})`:''}</button>`).join('')}</div>${body}</main>`+footer();
 }
 
 /* ===== Roteador ===== */
@@ -1542,7 +1673,7 @@ function route(){
   if(!S.session&&!AUTH_ROUTES.includes(r)){r='entrar';history.replaceState(null,'','#entrar')}
   if(S.session&&AUTH_ROUTES.includes(r)){r='home';history.replaceState(null,'','#home')}
   if(needSetup()&&r!=='configurar-perfil'&&!AUTH_ROUTES.includes(r)){r='configurar-perfil';history.replaceState(null,'','#configurar-perfil')}
-  CUR=r;document.body.classList.toggle('appmode',APP_ROUTES.includes(r));
+  CUR=r;document.body.classList.toggle('appmode',!AUTH_ROUTES.includes(r));
   if(AUTH_ROUTES.includes(r)){authPage(r);document.title=(r==='entrar'?'Entrar':'Criar conta')+' | Beauty Hub';return}
   if(MODS[r])modPage(r);
   else({home:homePage,mercado:mercadoPage,network:netPage,radar:radarPage,busca:searchPage,favoritos:favPage,cadastro:signupPage,'meu-perfil':meuPerfil,admin:adminPage,'configurar-perfil':()=>setupPage(),agendamentos:agendaPage,mensagens:msgPage,perfil:perfilPage})[r]();
@@ -1551,7 +1682,7 @@ function route(){
   window.scrollTo(0,0);
 }
 function go(r){if(location.hash==='#'+r)route();else location.hash=r}
-function refreshHeader(){const h=$('.hdr');if(h){const o=$('#nav')?.classList.contains('open');h.outerHTML=header(CUR);if(o)$('#nav')?.classList.add('open')}}
+function refreshHeader(){const h=$('.hdr');if(h)h.outerHTML=deskHeader(CUR)}
 function syncFav(id){
   const f=S.favs.includes(id);
   $$(`[data-fav="${id}"]`).forEach(b=>{b.classList.toggle('on',f);b.setAttribute('aria-pressed',f);if(b.classList.contains('heart'))b.setAttribute('aria-label',f?'Remover dos favoritos':'Salvar nos favoritos');else{const s=$('span',b);if(s)s.textContent=f?'Salvo nos favoritos':'Salvar nos favoritos'}});
@@ -1561,6 +1692,10 @@ function syncFav(id){
 /* ===== Eventos de interface ===== */
 document.addEventListener('click',e=>{
   const t=e.target;let el;
+  const pop=$('#acc-pop');
+  if(t.closest('[data-acc]')){const b=t.closest('[data-acc]'),o=pop.hidden;pop.hidden=!o;b.setAttribute('aria-expanded',o);return}
+  if(pop&&!pop.hidden&&!t.closest('#acc-pop'))pop.hidden=true;
+  if(t.closest('[data-back]')){if(history.length>1)history.back();else go('home');return}
   if(t.id==='ov'||t.closest('[data-close]')){closeSheet();return}
   if(el=t.closest('[data-fav]')){const id=el.dataset.fav,i=S.favs.indexOf(id);if(i>=0)S.favs.splice(i,1);else S.favs.push(id);save();syncFav(id);toast(i>=0?'Removido dos favoritos':'Salvo nos favoritos');if(CUR==='favoritos'&&$('#ov').hidden)favPage();return}
   if(el=t.closest('[data-follow]')){const id=el.dataset.follow,i=S.follows.indexOf(id);if(i>=0)S.follows.splice(i,1);else S.follows.push(id);save();$$(`[data-follow="${id}"]`).forEach(b=>{b.textContent=i>=0?'Seguir':'Seguindo';b.setAttribute('aria-pressed',i<0)});toast(i>=0?'Você deixou de seguir':'Você está seguindo');return}
@@ -1590,7 +1725,7 @@ document.addEventListener('click',e=>{
   if(el=t.closest('[data-reg]')){const [id,st]=el.dataset.reg.split(':');setReg(id,st);toast('Status atualizado: '+st);adminPage();return}
   if(el=t.closest('[data-rev]')){const [id,st]=el.dataset.rev.split(':');S.revStatus[id]=st;save();toast('Avaliação '+st);adminPage();return}
 });
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#ov').hidden)closeSheet()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('#ov').hidden)closeSheet();const p=$('#acc-pop');if(p)p.hidden=true}});
 document.addEventListener('input',e=>{
   const t=e.target;
   if(t.dataset&&t.dataset.bind){const k=t.dataset.bind;D[k]=t.type==='checkbox'?t.checked:t.value;if(D.err[k]){delete D.err[k];const er=t.closest('.f,.ck')?.querySelector('.err');if(er)er.remove()}if(k==='bio')$('#bio-n').textContent=t.value.length}
@@ -1622,7 +1757,17 @@ document.addEventListener('submit',e=>{
   }
 });
 addEventListener('hashchange',route);
+/* Trocou de celular para computador (ou o contrário): refaz a página no layout certo, sem perder o que foi digitado. */
+MQ.addEventListener('change',()=>{
+  setDev();
+  if(AUTH_ROUTES.includes(CUR))return;
+  const y=scrollY;
+  if(CUR==='configurar-perfil'&&P)setupPage(true);else route();
+  scrollTo(0,y);
+});
 document.addEventListener('DOMContentLoaded',route);
 if(document.readyState!=='loading')route();
 
 </script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+Beauty Hub - protótipo navegável (versão simplificada)
+
+Como abrir: dê dois cliques em index.html (funciona offline, exceto as fontes do Google).
+Pasta src/: código-fonte em partes. Para regenerar o index.html depois de editar: python3 build.py
+Cada módulo tem um único exemplar fictício (src/data.js). Dados salvos só no navegador.
+Login social, pagamento, upload e e-mails ficam para a versão final.
+
+Login: o site abre na tela Entrar. Crie uma conta (Crie sua conta) e entre; depois do login vai para a página inicial.
+As contas ficam salvas só no navegador (senha com hash), serve para testar o fluxo. Login de verdade para vários usuários exige servidor/banco, na versão final.
+
+--- Novidades (fluxo estilo app) ---
+Depois de criar a conta, a pessoa vai para "Complete seu cadastro" (src/app5.js).
+Cliente: foto, endereço (localização atual, busca ou CEP) e estilos de cílios preferidos.
+Profissional (objetivo "Quero divulgar" ou "Profissional de beleza"): além do endereço, nome profissional,
+especialidade, CPF/CNPJ, bio, local de trabalho (estúdio/domicílio), serviços com preço e duração, horários, pagamento, WhatsApp e Instagram.
+Home no estilo app: saudação, busca, categorias de cílios, filtros, especialistas em destaque e barra Home/Agendamentos/Mensagens/Perfil.
+Para regenerar o index.html depois de editar: python3 build.py
+
+--- Visual (referência do cliente) ---
+Cabeçalho e rodapé em ameixa (#4A0E24), rosé (#B87C86), off-white (#F6E8EB), rosé metálico (#D4A798), títulos finos em caixa alta.
+Home: categorias agora são Salões por perto, 5 estrelas, Palestrantes, Verificadas, A domicílio, Cursos, Eventos e Produtos.

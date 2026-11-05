@@ -32,6 +32,7 @@ O link "Painel administrativo" aparece no menu dessa conta.
 | Notificações | Geradas pelos eventos reais (pedido de horário, confirmação, mensagem, aprovação, pagamento…) |
 | Planos | Cadastro de divulgação → análise do admin → pagamento → recursos do plano liberados (selo, galeria, avaliações, link de agenda, prioridade). Planos e permissões são editáveis no admin |
 | Anúncios | Cursos, eventos, campeonatos, lojas, marcas, tecnologia e meetups criados por quem tem cadastro aprovado do tipo certo; aprovados pelo admin |
+| Publicações | A profissional publica texto, com foto opcional; aparecem na aba Publicações do perfil público (abas Publicações / Sobre / Avaliações, barra fixa com preço e botão de horário); admin pode excluir |
 | Network | Grupos, conversas e respostas reais, com moderação |
 | Admin | Visão geral, cadastros (aprovar, recusar, suspender, confirmar pagamento, verificar), conteúdo, planos, moderação — só para contas administradoras |
 

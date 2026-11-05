@@ -207,7 +207,7 @@ const homeList=()=>PROS_LIST;
 function proCardApp(p){
  const f=S.favs.includes(p.id),top=p.services.slice(0,2).map(s=>s.n.replace('Extensão de cílios – ','')),mp=minPrice(p);
  return `<article class="pc" data-xpro="${p.id}" tabindex="0" role="button" aria-label="Ver ${esc(p.name)}">
-  ${avatarHTML(p.photo,p.name)}<div class="pc-b"><h3>${esc(p.name)}${p.own?' <em>você</em>':''}</h3><small>${esc(p.role)}${p.verified?` · <span class="verified">${ic('shield')}Verificada</span>`:''}</small>
+  ${p.cover?`<img class="pc-cv" src="${esc(p.cover)}" alt="" loading="lazy">`:avatarHTML(p.photo,p.name)}<div class="pc-b"><h3>${esc(p.name)}${p.own?' <em>você</em>':''}</h3><small>${esc(p.role)}${p.verified?` · <span class="verified">${ic('shield')}Verificada</span>`:''}</small>
   <div class="pc-m">${p.rating?`<span class="rate">${ic('star','fill')} ${rateTxt(p)} <span>(${p.reviews})</span></span>`:'<span class="novo">Novo</span>'}<span>${ic('pin')}${esc(p.city)}</span></div>
   <div class="pc-t">${top.map(t=>`<span>${esc(t)}</span>`).join('')}</div></div>
   <div class="pc-r"><button class="pc-fav ${f?'on':''}" data-fav="${p.id}" aria-pressed="${f}" aria-label="${f?'Remover dos favoritos':'Salvar nos favoritos'}">${ic('heart')}</button>${mp<1e9?`<small>a partir de</small><b>${brl0(mp)}</b>`:''}</div></article>`;
@@ -390,6 +390,7 @@ function perfilPage(){
   ${pro?`<section class="xsec"><h2>Serviços</h2><div class="xps">${(s.services||[]).map(v=>`<div><span>${esc(v.n)}<small>${durTxt(v.d)}</small></span><b>${brl0(v.p)}</b></div>`).join('')}</div></section>
   <section class="xsec"><h2>Atendimento</h2><div class="facts">${row('Tipo',(ATEND.find(x=>x[0]===s.atend)||[])[1])}${s.atend!=='domicilio'?row('Local de trabalho',addr(wk)):''}${s.atend!=='estudio'?row('Raio a domicílio','até '+s.raio+' km'):''}${row('Horários',(s.dias||[]).map(d=>DIAS[d]).join(', ')+' · '+s.abre+' às '+s.fecha)}${row('Pagamento',(s.pagto||[]).join(', '))}${row('WhatsApp',s.wa)}${row('Instagram',s.ig?'@'+s.ig:'')}</div></section>`
   :`<section class="xsec"><h2>Estilos que você gosta</h2><div class="xchips">${(s.pref||[]).length?s.pref.map(x=>`<span class="xchip" aria-pressed="true">${esc(x)}</span>`).join(''):'<small style="color:var(--muted)">Nenhum estilo escolhido.</small>'}</div></section>`}
+  ${pro?`<section class="xsec"><h2>Publicações</h2><p class="xd">Compartilhe novidades com suas clientes, com ou sem foto.</p><div class="row-actions"><button class="btn" data-newpost>${ic('plus')}Nova publicação</button><button class="btn ghost" data-xpro="p${a.id}">Ver meu perfil público</button></div></section>`:''}
   <section class="xsec"><h2>Plano e divulgação</h2><p class="xd">${S.reg?'Veja o status do seu cadastro, plano e anúncios.':'Escolha um plano para destacar o seu perfil e liberar mais recursos.'}</p><button class="btn ghost" data-go="${regRoute()}">${S.reg?'Ver meu plano':'Escolher plano'}</button></section>
   </div><div class="pf2-c"><section class="xsec"><div class="xmenu">${[['favoritos','Favoritos','heart'],['eventos','Eventos','cal'],['educacao','Educação','cap'],['mercado','Mercado','store'],['network','Network','users']].concat(isAdmin()?[['admin','Painel administrativo','cog']]:[]).map(([r,t,i])=>`<button data-go="${r}">${ic(i)}<span>${t}</span>${ic('chev')}</button>`).join('')}<button data-logout class="out">${ic('out')}<span>Sair da conta</span></button></div></section>
   <section class="xsec"><h2>Privacidade</h2><p class="xd">Excluir sua conta apaga seus dados, agendamentos, mensagens e anúncios.</p><button class="btn ghost sm" data-delaccount>Excluir minha conta</button></section></div></div></main>`+footer();
@@ -407,7 +408,7 @@ document.addEventListener('click',e=>{
  if(el=t.closest('[data-xsort]')){H.sort=el.dataset.xsort;H.all=false;if(el.hasAttribute('data-xclose'))closeSheet();homePage();return}
  if(t.closest('[data-xall]')){H.all=!H.all;homePage();return}
  if(t.closest('[data-xclear]')){H.sort='near';H.ver=false;H.cat='';H.q='';closeSheet();homePage();return}
- if(el=t.closest('[data-xpro]')){openPro(el.dataset.xpro);return}
+ if(el=t.closest('[data-xpro]')){PP.tab='pubs';closeSheet();go('profissional/'+el.dataset.xpro);return}
  if(el=t.closest('[data-xbook]')){openBook(el.dataset.xbook);return}
  if(el=t.closest('[data-xconfirm]')){confirmBook(el.dataset.xconfirm);return}
  /* configurar perfil */
@@ -446,4 +447,4 @@ document.addEventListener('change',e=>{
  if(d.xsvc){const [i,f]=d.xsvc.split(':');P.services[+i][f]=t.value;return}
  if(d.px==='mesmo'){P.mesmo=t.checked;setupPage(true)}
 });
-document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('.pc[data-xpro]')){e.preventDefault();openPro(e.target.dataset.xpro)}});
+document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('.pc[data-xpro]')){e.preventDefault();PP.tab='pubs';go('profissional/'+e.target.dataset.xpro)}});

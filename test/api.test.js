@@ -178,3 +178,22 @@ test('health check e rotinas automáticas (aviso de plano, lembrete, backup)', a
   const gz = await fetch(T.base + '/app.js', { headers: { 'Accept-Encoding': 'gzip' } });
   assert.equal(gz.status, 200);
 });
+
+test('publicações: texto, foto opcional, exclusão e moderação', async () => {
+  const pc = T.client(), ac = T.client();
+  let r = await signup(pc, { nome: 'Paula Lima', doc: CPF[2], email: 'paula@x.com', obj: 'divulgar', papel: '' });
+  assert.equal(r.status, 200);
+  assert.equal((await pc.raw('/api/me/posts?texto=oi', Buffer.alloc(0))).status, 409); // perfil incompleto
+  await pc.put('/api/me/setup', { ...addr, nomeProf: 'Paula Studio', spec: 'Lash Designer', doc: CPF[2], anos: '3', bio: '', atend: 'estudio', mesmo: true, w: {}, raio: 10, dias: [1, 2, 3], abre: '09:00', fecha: '18:00', pagto: ['Pix'], wa: '41999998888', ig: '', pref: [], services: [{ n: 'Fio a fio', p: 80, d: 90 }] });
+  assert.equal((await pc.raw('/api/me/posts', Buffer.alloc(0))).status, 422);
+  r = await pc.raw('/api/me/posts?texto=' + encodeURIComponent('Novidade no estúdio'), Buffer.alloc(0));
+  assert.equal(r.status, 200); assert.equal(r.body.photo, '');
+  const r2 = await pc.raw('/api/me/posts?texto=com%20foto', PNG);
+  assert.equal(r2.status, 200); assert.match(r2.body.photo, /^\/uploads\//);
+  const pid = T.db.one('SELECT account_id id FROM posts LIMIT 1').id;
+  const d = await ac.get('/api/pros/p' + pid);
+  assert.equal(d.status, 200); assert.equal(d.body.posts.length, 2); assert.equal(d.body.dist[5], 0);
+  assert.equal((await pc.del('/api/me/posts/' + r.body.id)).status, 200);
+  assert.equal((await ac.get('/api/pros/p' + pid)).body.posts.length, 1);
+  assert.equal((await pc.raw('/api/me/posts?texto=x', Buffer.from('nao-imagem-nao-imagem'))).status, 415);
+});

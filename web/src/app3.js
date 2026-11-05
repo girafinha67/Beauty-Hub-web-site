@@ -113,13 +113,14 @@ async function meuPerfil(){
   if(!S.reg){app().innerHTML=header('meu-perfil')+`<main class="wrap"><div class="empty-state mt40"><h2 style="font-size:34px;color:var(--ink)">Você ainda não divulga seu trabalho</h2><p>Faça o cadastro em 3 passos e escolha um plano para aparecer no Beauty Hub.</p><button class="btn" data-go="cadastro">Divulgar meu trabalho ${ic('arrow')}</button></div></main>`+footer();return}
   const u=S.reg,st=S.setup||{},P=PLANS()[u.plan]||{name:u.plan,price:0,perms:{}},x=permsNow(),tipo=PROFILE_TYPES.find(t=>t.id===u.tipo)||{name:u.tipo};
   const mine=await GET('/api/listings/mine');MYLIST=mine.items;
+  let myposts=[];if(PT==='publicacoes'&&isProTipo()){try{myposts=(await GET('/api/me/posts')).items}catch(e){}}
   let rev=[];
   if(isProTipo()&&S.acc){try{rev=(await GET('/api/pros/p'+S.acc.id)).reviewList||[]}catch(e){}}
   const stMap={pendente:['Em análise',''],aprovado:['Aprovado','ok'],recusado:['Recusado','bad'],suspenso:['Suspenso','bad']};
   const [stT,stC]=stMap[u.status]||stMap.pendente;
   const firstWith=perm=>Object.values(PLANS()).find(p=>p.perms[perm]);
   const tabs=[['sobre','Sobre'],['anuncios','Anúncios']];
-  if(isProTipo())tabs.push(['servicos','Serviços'],['avaliacoes','Avaliações'],['fotos','Fotos']);
+  if(isProTipo())tabs.push(['servicos','Serviços'],['avaliacoes','Avaliações'],['fotos','Fotos'],['publicacoes','Publicações']);
   tabs.push(['local','Localização']);
   if(!tabs.some(t=>t[0]===PT))PT='sobre';
   const svcAll=st.services||[],svcs=x.proc>0?svcAll.slice(0,x.proc):svcAll;
@@ -137,6 +138,7 @@ async function meuPerfil(){
     const g=st.gallery||[],max=x.galeria?20:3;
     body=`<div class="gal">${g.map(p=>`<div><img src="${esc(p.url)}" alt="Foto do trabalho" loading="lazy"><button class="gdel" data-delphoto="${p.id}" aria-label="Remover foto">${ic('trash')}</button></div>`).join('')}${g.length<max?`<label class="gal-add">${ic('camera')}<span>Adicionar foto</span><input type="file" accept="image/jpeg,image/png,image/webp" data-galadd hidden></label>`:''}</div><p style="color:var(--muted);font-size:13px">${g.length} de ${max} fotos. ${x.galeria?'Galeria ampliada do seu plano.':'Planos com galeria liberam mais fotos.'}</p>`;
   }
+  if(PT==='publicacoes')body=postsTab(myposts);
   if(PT==='local')body=st.cidade?`<p>${esc([st.rua&&(st.rua+', '+st.num),st.bairro].filter(Boolean).join(' · '))}</p><p>${esc(st.cidade)} - ${esc(st.uf)}</p><div class="row-actions"><button class="btn sm ghost" data-go="configurar-perfil">Editar endereço</button></div>`:'<p>Informe seu endereço em “Editar perfil”.</p>';
   const link=(href,label,icn)=>`<a class="btn ghost sm" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${ic(icn)}${label}</a>`;
   const waD=digits(st.wa),wa=waD?link('https://wa.me/55'+waD,'WhatsApp','chat'):'',ig=st.ig?link('https://instagram.com/'+st.ig,'Instagram','user'):'';

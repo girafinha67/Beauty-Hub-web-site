@@ -44,7 +44,10 @@ R.get('/api/pros/:id', ctx => {
     : D.all('SELECT file url FROM photos WHERE account_id=? ORDER BY id DESC LIMIT 3', id);
   const reviews = p.canReview ? D.all(`SELECT r.nota, r.texto, r.created_at, a.nome FROM reviews r JOIN accounts a ON a.id=r.author_id
       WHERE r.pro_id=? AND r.status='aprovada' ORDER BY r.id DESC LIMIT 20`, id).map(r => ({ nota: r.nota, texto: r.texto, at: r.created_at, autor: r.nome.split(' ')[0] })) : [];
-  return { ...strip(p), gallery: gallery.map(g => g.url), reviewList: reviews };
+  const posts = D.all('SELECT id, texto, photo, created_at at FROM posts WHERE account_id=? ORDER BY id DESC LIMIT 30', id);
+  const dist = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  if (p.canReview) D.all(`SELECT nota, COUNT(*) n FROM reviews WHERE pro_id=? AND status='aprovada' GROUP BY nota`, id).forEach(r => { dist[r.nota] = r.n; });
+  return { ...strip(p), gallery: gallery.map(g => g.url), reviewList: reviews, posts, dist };
 });
 
 R.get('/api/search', ctx => {

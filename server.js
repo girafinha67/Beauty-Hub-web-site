@@ -4,7 +4,7 @@ const cfg = require('./lib/config');
 require('./lib/db');
 const { handler } = require('./lib/http');
 const { startJobs } = require('./lib/jobs');
-['auth', 'profile', 'pros', 'booking', 'chat', 'community', 'registration', 'admin', 'misc'].forEach(r => require('./routes/' + r));
+['auth', 'profile', 'pros', 'booking', 'chat', 'community', 'registration', 'posts', 'admin', 'misc'].forEach(r => require('./routes/' + r));
 
 function start(port = cfg.port) {
   const server = http.createServer(handler);

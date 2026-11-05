@@ -442,13 +442,14 @@ async function meuPerfil(){
   if(!S.reg){app().innerHTML=header('meu-perfil')+`<main class="wrap"><div class="empty-state mt40"><h2 style="font-size:34px;color:var(--ink)">Você ainda não divulga seu trabalho</h2><p>Faça o cadastro em 3 passos e escolha um plano para aparecer no Beauty Hub.</p><button class="btn" data-go="cadastro">Divulgar meu trabalho ${ic('arrow')}</button></div></main>`+footer();return}
   const u=S.reg,st=S.setup||{},P=PLANS()[u.plan]||{name:u.plan,price:0,perms:{}},x=permsNow(),tipo=PROFILE_TYPES.find(t=>t.id===u.tipo)||{name:u.tipo};
   const mine=await GET('/api/listings/mine');MYLIST=mine.items;
+  let myposts=[];if(PT==='publicacoes'&&isProTipo()){try{myposts=(await GET('/api/me/posts')).items}catch(e){}}
   let rev=[];
   if(isProTipo()&&S.acc){try{rev=(await GET('/api/pros/p'+S.acc.id)).reviewList||[]}catch(e){}}
   const stMap={pendente:['Em análise',''],aprovado:['Aprovado','ok'],recusado:['Recusado','bad'],suspenso:['Suspenso','bad']};
   const [stT,stC]=stMap[u.status]||stMap.pendente;
   const firstWith=perm=>Object.values(PLANS()).find(p=>p.perms[perm]);
   const tabs=[['sobre','Sobre'],['anuncios','Anúncios']];
-  if(isProTipo())tabs.push(['servicos','Serviços'],['avaliacoes','Avaliações'],['fotos','Fotos']);
+  if(isProTipo())tabs.push(['servicos','Serviços'],['avaliacoes','Avaliações'],['fotos','Fotos'],['publicacoes','Publicações']);
   tabs.push(['local','Localização']);
   if(!tabs.some(t=>t[0]===PT))PT='sobre';
   const svcAll=st.services||[],svcs=x.proc>0?svcAll.slice(0,x.proc):svcAll;
@@ -466,6 +467,7 @@ async function meuPerfil(){
     const g=st.gallery||[],max=x.galeria?20:3;
     body=`<div class="gal">${g.map(p=>`<div><img src="${esc(p.url)}" alt="Foto do trabalho" loading="lazy"><button class="gdel" data-delphoto="${p.id}" aria-label="Remover foto">${ic('trash')}</button></div>`).join('')}${g.length<max?`<label class="gal-add">${ic('camera')}<span>Adicionar foto</span><input type="file" accept="image/jpeg,image/png,image/webp" data-galadd hidden></label>`:''}</div><p style="color:var(--muted);font-size:13px">${g.length} de ${max} fotos. ${x.galeria?'Galeria ampliada do seu plano.':'Planos com galeria liberam mais fotos.'}</p>`;
   }
+  if(PT==='publicacoes')body=postsTab(myposts);
   if(PT==='local')body=st.cidade?`<p>${esc([st.rua&&(st.rua+', '+st.num),st.bairro].filter(Boolean).join(' · '))}</p><p>${esc(st.cidade)} - ${esc(st.uf)}</p><div class="row-actions"><button class="btn sm ghost" data-go="configurar-perfil">Editar endereço</button></div>`:'<p>Informe seu endereço em “Editar perfil”.</p>';
   const link=(href,label,icn)=>`<a class="btn ghost sm" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${ic(icn)}${label}</a>`;
   const waD=digits(st.wa),wa=waD?link('https://wa.me/55'+waD,'WhatsApp','chat'):'',ig=st.ig?link('https://instagram.com/'+st.ig,'Instagram','user'):'';
@@ -870,7 +872,7 @@ const homeList=()=>PROS_LIST;
 function proCardApp(p){
  const f=S.favs.includes(p.id),top=p.services.slice(0,2).map(s=>s.n.replace('Extensão de cílios – ','')),mp=minPrice(p);
  return `<article class="pc" data-xpro="${p.id}" tabindex="0" role="button" aria-label="Ver ${esc(p.name)}">
-  ${avatarHTML(p.photo,p.name)}<div class="pc-b"><h3>${esc(p.name)}${p.own?' <em>você</em>':''}</h3><small>${esc(p.role)}${p.verified?` · <span class="verified">${ic('shield')}Verificada</span>`:''}</small>
+  ${p.cover?`<img class="pc-cv" src="${esc(p.cover)}" alt="" loading="lazy">`:avatarHTML(p.photo,p.name)}<div class="pc-b"><h3>${esc(p.name)}${p.own?' <em>você</em>':''}</h3><small>${esc(p.role)}${p.verified?` · <span class="verified">${ic('shield')}Verificada</span>`:''}</small>
   <div class="pc-m">${p.rating?`<span class="rate">${ic('star','fill')} ${rateTxt(p)} <span>(${p.reviews})</span></span>`:'<span class="novo">Novo</span>'}<span>${ic('pin')}${esc(p.city)}</span></div>
   <div class="pc-t">${top.map(t=>`<span>${esc(t)}</span>`).join('')}</div></div>
   <div class="pc-r"><button class="pc-fav ${f?'on':''}" data-fav="${p.id}" aria-pressed="${f}" aria-label="${f?'Remover dos favoritos':'Salvar nos favoritos'}">${ic('heart')}</button>${mp<1e9?`<small>a partir de</small><b>${brl0(mp)}</b>`:''}</div></article>`;
@@ -1053,6 +1055,7 @@ function perfilPage(){
   ${pro?`<section class="xsec"><h2>Serviços</h2><div class="xps">${(s.services||[]).map(v=>`<div><span>${esc(v.n)}<small>${durTxt(v.d)}</small></span><b>${brl0(v.p)}</b></div>`).join('')}</div></section>
   <section class="xsec"><h2>Atendimento</h2><div class="facts">${row('Tipo',(ATEND.find(x=>x[0]===s.atend)||[])[1])}${s.atend!=='domicilio'?row('Local de trabalho',addr(wk)):''}${s.atend!=='estudio'?row('Raio a domicílio','até '+s.raio+' km'):''}${row('Horários',(s.dias||[]).map(d=>DIAS[d]).join(', ')+' · '+s.abre+' às '+s.fecha)}${row('Pagamento',(s.pagto||[]).join(', '))}${row('WhatsApp',s.wa)}${row('Instagram',s.ig?'@'+s.ig:'')}</div></section>`
   :`<section class="xsec"><h2>Estilos que você gosta</h2><div class="xchips">${(s.pref||[]).length?s.pref.map(x=>`<span class="xchip" aria-pressed="true">${esc(x)}</span>`).join(''):'<small style="color:var(--muted)">Nenhum estilo escolhido.</small>'}</div></section>`}
+  ${pro?`<section class="xsec"><h2>Publicações</h2><p class="xd">Compartilhe novidades com suas clientes, com ou sem foto.</p><div class="row-actions"><button class="btn" data-newpost>${ic('plus')}Nova publicação</button><button class="btn ghost" data-xpro="p${a.id}">Ver meu perfil público</button></div></section>`:''}
   <section class="xsec"><h2>Plano e divulgação</h2><p class="xd">${S.reg?'Veja o status do seu cadastro, plano e anúncios.':'Escolha um plano para destacar o seu perfil e liberar mais recursos.'}</p><button class="btn ghost" data-go="${regRoute()}">${S.reg?'Ver meu plano':'Escolher plano'}</button></section>
   </div><div class="pf2-c"><section class="xsec"><div class="xmenu">${[['favoritos','Favoritos','heart'],['eventos','Eventos','cal'],['educacao','Educação','cap'],['mercado','Mercado','store'],['network','Network','users']].concat(isAdmin()?[['admin','Painel administrativo','cog']]:[]).map(([r,t,i])=>`<button data-go="${r}">${ic(i)}<span>${t}</span>${ic('chev')}</button>`).join('')}<button data-logout class="out">${ic('out')}<span>Sair da conta</span></button></div></section>
   <section class="xsec"><h2>Privacidade</h2><p class="xd">Excluir sua conta apaga seus dados, agendamentos, mensagens e anúncios.</p><button class="btn ghost sm" data-delaccount>Excluir minha conta</button></section></div></div></main>`+footer();
@@ -1070,7 +1073,7 @@ document.addEventListener('click',e=>{
  if(el=t.closest('[data-xsort]')){H.sort=el.dataset.xsort;H.all=false;if(el.hasAttribute('data-xclose'))closeSheet();homePage();return}
  if(t.closest('[data-xall]')){H.all=!H.all;homePage();return}
  if(t.closest('[data-xclear]')){H.sort='near';H.ver=false;H.cat='';H.q='';closeSheet();homePage();return}
- if(el=t.closest('[data-xpro]')){openPro(el.dataset.xpro);return}
+ if(el=t.closest('[data-xpro]')){PP.tab='pubs';closeSheet();go('profissional/'+el.dataset.xpro);return}
  if(el=t.closest('[data-xbook]')){openBook(el.dataset.xbook);return}
  if(el=t.closest('[data-xconfirm]')){confirmBook(el.dataset.xconfirm);return}
  /* configurar perfil */
@@ -1109,7 +1112,96 @@ document.addEventListener('change',e=>{
  if(d.xsvc){const [i,f]=d.xsvc.split(':');P.services[+i][f]=t.value;return}
  if(d.px==='mesmo'){P.mesmo=t.checked;setupPage(true)}
 });
-document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('.pc[data-xpro]')){e.preventDefault();openPro(e.target.dataset.xpro)}});
+document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('.pc[data-xpro]')){e.preventDefault();PP.tab='pubs';go('profissional/'+e.target.dataset.xpro)}});
+
+/* ===== Página da profissional (abas Publicações / Sobre / Avaliações) e publicações ===== */
+const PP={id:'',tab:'pubs'};
+const DIAS_FULL=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+const notaTxt=n=>n>=4.5?'Muito satisfeito!':n>=3.5?'Satisfeito':n>=2.5?'Pouco satisfeito':n>=1.5?'Insatisfeito':'Totalmente insatisfeito';
+const NOTA_L={5:'Muito satisfeito',4:'Satisfeito',3:'Pouco satisfeito',2:'Insatisfeito',1:'Totalmente insatisfeito'};
+const starsRow=n=>Array.from({length:5},(_,i)=>`<span class="${i<n?'on':''}">${ic('star','fill')}</span>`).join('');
+function postCard(p,who){
+  return `<article class="post"><header>${avatarHTML(who.photo,who.name)}<div><b>${esc(who.name)}</b><small>${ago(p.at)}</small></div></header>
+   ${p.texto?`<p>${esc(p.texto)}</p>`:''}${p.photo?`<img src="${esc(p.photo)}" alt="Foto da publicação de ${esc(who.name)}" loading="lazy">`:''}</article>`;
+}
+async function proPage(id){
+  if(id&&id!==PP.id){PP.id=id;PP.tab='pubs'}
+  const p=await GET('/api/pros/'+PP.id);CACHE.set(p.id,p);
+  const svc=p.services.slice().sort((a,b)=>a.p-b.p)[0],today=new Date().getDay(),at=(ATEND.find(x=>x[0]===p.atend)||[])[1]||'';
+  const tabs=[['pubs','Publicações'],['sobre','Sobre'],['aval','Avaliações']];
+  const last=(p.reviewList||[])[0],tot=p.reviews||0,dist=p.dist||{};
+  let body='';
+  if(PP.tab==='pubs'){
+    body=`${p.gallery.length?`<h2 class="pp-h">${ic('camera')}Galeria de fotos</h2><div class="gal ro">${p.gallery.map(u=>`<div><img src="${esc(u)}" alt="Trabalho de ${esc(p.name)}" loading="lazy"></div>`).join('')}</div>`:''}
+     <h2 class="pp-h">Publicações</h2>${p.posts.length?`<div class="posts">${p.posts.map(x=>postCard(x,p)).join('')}</div>`:`<div class="empty-state">${p.own?'Você ainda não publicou. Crie sua primeira publicação em Meu perfil.':'Esta profissional ainda não fez publicações.'}</div>`}`;
+  }
+  if(PP.tab==='sobre'){
+    const hr=DIAS_FULL.map((n,i)=>`<div class="pp-hr"><span>${n}${i===today?' <em>Hoje</em>':''}</span><b>${(p.dias||[]).includes(i)?`${esc(p.abre)} às ${esc(p.fecha)}`:'Não atende'}</b></div>`).join('');
+    body=`<h2 class="pp-h">${ic('user')}Sobre</h2>
+     <div class="pp-box"><h3>Descrição</h3><p>${p.bio?esc(p.bio):'Esta profissional ainda não escreveu uma descrição.'}</p></div>
+     <div class="pp-box"><h3>Informações</h3><div class="pp-chips">${[p.anos&&'Experiência: '+p.anos,at&&at+(p.atend!=='estudio'?` (até ${p.raio} km)`:''),...(p.pagto||[])].filter(Boolean).map(t=>`<span>${esc(t)}</span>`).join('')}</div></div>
+     <div class="pp-box"><h3>Serviços oferecidos</h3><div class="xps">${p.services.map(s=>`<div><span>${esc(s.n)}<small>${durTxt(s.d)}</small></span><b>${brl0(s.p)}</b></div>`).join('')}</div></div>
+     <div class="pp-box"><h3>Horário de expediente</h3>${hr}<small class="pp-note">A disponibilidade real aparece ao solicitar o horário.</small></div>`;
+  }
+  if(PP.tab==='aval'){
+    const list=p.reviewList||[];
+    body=`<h2 class="pp-h">Avaliações de ${esc(p.name)}</h2>
+     ${tot?`<div class="pp-sum"><div><b>${rateTxt(p)}</b><div class="stars">${starsRow(Math.round(p.rating))}</div></div><div class="mid">${notaTxt(p.rating)}</div><div class="end"><b>${tot}</b> avaliaç${tot===1?'ão':'ões'} feita${tot===1?'':'s'}</div></div>
+     <div class="pp-dist">${[5,4,3,2,1].map(n=>`<div><span>${n}</span><i><u style="width:${tot?Math.round((dist[n]||0)/tot*100):0}%"></u></i><em>${NOTA_L[n]}</em></div>`).join('')}</div>`:`<div class="empty-state">Ainda sem avaliações. Clientes avaliam depois de um atendimento concluído.</div>`}
+     <div class="pp-safe"><b>${ic('shield')}Avaliações seguras</b><p>Só avalia quem teve um atendimento concluído pelo Beauty Hub, e a equipe revisa o conteúdo. Compartilhe sua experiência com tranquilidade.</p></div>
+     ${list.length?`<h3 class="pp-h2">Mais recentes</h3><div class="stack">${list.map(r=>`<div class="pp-rev"><div class="av">${esc(initials(r.autor))}</div><div><b>${esc(r.autor)}</b><small>${ago(r.at)}</small><div class="rate">${r.nota} ${ic('star','fill')} ${NOTA_L[r.nota]||''}</div>${r.texto?`<p>${esc(r.texto)}</p>`:''}</div></div>`).join('')}</div>`:''}`;
+  }
+  const ext=(h,l)=>`<a class="btn ghost" href="${esc(h)}" target="_blank" rel="noopener noreferrer">${l}</a>`;
+  app().innerHTML=header('profissional',{nobar:true})+`<main class="wrap pp">
+   <div class="pp-cover"></div>
+   <div class="pp-id">${avatarHTML(p.photo,p.name,'xl')}<div><h1>${esc(p.name)}</h1><small>${esc(p.role)} · ${esc(p.city)}</small>${p.verified?`<span class="pp-ver">${ic('shield')}Perfil verificado</span>`:''}</div></div>
+   ${tot?`<div class="pp-rec"><div class="pp-rec-h"><span>Avaliações recentes</span><span class="rate">${ic('star','fill')} ${rateTxt(p)} <span>(${tot})</span></span></div>
+     <div class="pp-rec-b">${last?`<div class="pp-mini"><b>${last.nota} ★ · ${ago(last.at)}</b><span>${esc((last.texto||NOTA_L[last.nota]||'').slice(0,60))}</span></div>`:''}<button class="btn ghost" data-pptab="aval">Ler avaliações</button></div></div>`:''}
+   <div class="pp-info"><div class="pp-box"><small>${ic('tag')} Valores</small><span>a partir de</span><b class="pr">${svc?brl0(svc.p):'—'}</b><span>${svc?durTxt(svc.d):''}</span></div>
+    <div class="pp-box"><small>${ic('pin')} Localização</small><b>${esc(p.city)}</b><span>${esc(at)}</span></div></div>
+   <div class="row-actions">${p.own?'':`<button class="btn ghost" data-msg="${p.acc}">${ic('chat')}Mensagem</button>`}${p.wa?ext('https://wa.me/'+p.wa,ic('chat')+'WhatsApp'):''}${p.ig?ext('https://instagram.com/'+p.ig,'Instagram'):''}${p.agenda?ext(p.agenda,ic('cal')+'Agenda online'):''}${favBtn(p.id)}</div>
+   <div class="tabs pp-tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" aria-selected="${PP.tab===k}" data-pptab="${k}">${l}${k==='aval'&&tot?`<small>(${tot})</small>`:''}</button>`).join('')}</div>
+   ${body}</main>
+   <div class="pp-bar"><div><small>a partir de</small><b>${svc?brl0(svc.p):'—'}</b>${svc?`<small>(${durTxt(svc.d)})</small>`:''}</div>${p.own?`<button class="btn" data-go="meu-perfil">Gerenciar perfil</button>`:`<button class="btn" data-xbook="${p.id}">Solicitar horário</button>`}</div>`;
+}
+
+/* ----- publicações (no Meu perfil) ----- */
+function resizeImg(file,max){return new Promise((res,rej)=>{
+  const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{
+    const sc=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*sc);c.height=Math.round(im.height*sc);
+    c.getContext('2d').drawImage(im,0,0,c.width,c.height);c.toBlob(b=>b?res(b):rej(new Error('Não consegui preparar a imagem')),'image/jpeg',.85)};
+    im.onerror=()=>rej(new Error('Não consegui abrir essa imagem'));im.src=r.result};r.readAsDataURL(file)})}
+function postsTab(list){
+  const who={name:(S.setup&&S.setup.nomeProf)||(S.acc&&S.acc.nome)||'',photo:S.setup&&S.setup.photo};
+  return `${pubForm()}
+   <div class="row-actions"><button class="btn sm ghost" data-xpro="p${S.acc.id}">Ver como as clientes veem</button></div>
+   ${list.length?`<div class="posts">${list.map(x=>`<div class="post-own">${postCard(x,who)}<button class="btn sm ghost" data-delpost="${x.id}" aria-label="Excluir publicação">${ic('trash')}Excluir</button></div>`).join('')}</div>`:`<p class="note">Você ainda não publicou. A foto é opcional: pode publicar só com texto.</p>`}`;
+}
+function pubForm(){
+  return `<div class="pubf"><textarea id="np-t" maxlength="1000" placeholder="Compartilhe uma novidade, promoção ou dica com suas clientes…" aria-label="Texto da publicação"></textarea>
+   <div class="pubf-r"><label class="btn ghost sm">${ic('camera')}Foto (opcional)<input id="np-f" type="file" accept="image/jpeg,image/png,image/webp" hidden></label><span id="np-n" class="note"></span><button class="btn sm" type="button" data-postsend>Publicar</button></div></div>`;
+}
+document.addEventListener('change',e=>{const t=e.target;if(t.id==='np-f'){const n=$('#np-n');if(n)n.textContent=t.files[0]?t.files[0].name:''}});
+document.addEventListener('click',e=>{
+  const t=e.target;let el;
+  if(el=t.closest('[data-pptab]')){PP.tab=el.dataset.pptab;proPage();window.scrollTo(0,0);return}
+  if(t.closest('[data-postsend]')){
+    const txt=($('#np-t').value||'').trim(),f=$('#np-f').files[0];
+    if(!txt&&!f){toast('Escreva algo ou escolha uma foto');return}
+    act(async()=>{
+      const blob=f?await resizeImg(f,1600):new Blob([]);
+      await API('POST','/api/me/posts?texto='+encodeURIComponent(txt),blob,true);
+      toast('Publicado!');closeSheet();if(CUR==='perfil')perfilPage();else meuPerfil()});
+    return;
+  }
+  if(el=t.closest('[data-delpost]')){
+    if(!el.dataset.sure){el.dataset.sure='1';el.textContent='Confirmar?';return}
+    act(async()=>{await DEL('/api/me/posts/'+el.dataset.delpost);toast('Publicação excluída');meuPerfil()});return}
+  if(el=t.closest('[data-adelpost]')){act(async()=>{await POST(`/api/admin/posts/${el.dataset.adelpost}/delete`);toast('Publicação removida');adminPage()});return}
+});
+
+function openPostSheet(){openSheet(`${closeBtn}<div class="body"><h2>Nova publicação</h2><p class="note" style="margin:0">A foto é opcional.</p>${pubForm()}</div>`)}
+document.addEventListener('click',e=>{if(e.target.closest('[data-newpost]'))openPostSheet()});
 
 /* ===== Painel administrativo (exige conta administradora; os dados vêm do servidor) ===== */
 const A={tab:'visao',reg:'todos'};
@@ -1147,15 +1239,16 @@ async function adminPage(){
     body=`<h2 style="font-size:28px">Avaliações</h2><div class="tw"><table><thead><tr><th>Avaliação</th><th>Sobre</th><th>Nota</th><th>Status</th><th>Ações</th></tr></thead><tbody>${rv.map(v=>`<tr><td><b style="font-weight:500">${esc(v.autor)}</b><br><small style="color:var(--muted)">${esc(v.texto||'Sem comentário')}</small></td><td>${esc(v.alvo)}</td><td>${v.nota}</td><td>${statusPill(v.status)}</td><td><div class="row-actions">${v.status==='aprovada'?`<button class="btn sm ghost" data-rev="${v.id}:removida">Remover</button>`:`<button class="btn sm" data-rev="${v.id}:aprovada">Restaurar</button>`}</div></td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--muted)">Nenhuma avaliação ainda.</td></tr>'}</tbody></table></div>
     <h2 style="font-size:28px;margin-top:32px">Conversas do Network</h2><div class="tw"><table><thead><tr><th>Pergunta</th><th>Autor</th><th>Ação</th></tr></thead><tbody>${th.map(t=>`<tr><td>${esc(t.question)}<br><small style="color:var(--muted)">${esc(t.tag)} · ${ago(t.created_at)}</small></td><td>${esc(t.autor)}</td><td><button class="btn sm ghost" data-delthread="${t.id}">${ic('trash')}Excluir</button></td></tr>`).join('')||'<tr><td colspan="3" style="text-align:center;color:var(--muted)">Nenhuma conversa.</td></tr>'}</tbody></table></div>`;
   }
+  if(A.tab==='mod'){const ps=(await GET('/api/admin/posts')).items;body+=`<h2 style="font-size:28px;margin-top:32px">Publicações</h2><div class="tw"><table><thead><tr><th>Publicação</th><th>Autora</th><th>Ação</th></tr></thead><tbody>${ps.map(x=>`<tr><td>${esc(x.texto||'(só foto)')}${x.photo?` <a href="${esc(x.photo)}" target="_blank" rel="noopener">foto</a>`:''}<br><small style="color:var(--muted)">${ago(x.created_at)}</small></td><td>${esc(x.autor)}</td><td><button class="btn sm ghost" data-adelpost="${x.id}">${ic('trash')}Excluir</button></td></tr>`).join('')||'<tr><td colspan="3" style="text-align:center;color:var(--muted)">Nenhuma publicação.</td></tr>'}</tbody></table></div>`}
   app().innerHTML=header('admin')+`<main class="wrap" style="padding-bottom:8px"><h1 class="pg-h1">Painel administrativo</h1><div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" aria-selected="${A.tab===k}" data-atab="${k}">${l}${(k==='cad'&&ov.pending)||(k==='cont'&&ov.listingsPending)?` (${k==='cad'?ov.pending:ov.listingsPending})`:''}</button>`).join('')}</div>${body}</main>`+footer();
 }
 
 /* ===== Roteador ===== */
-const ROUTES=['home','eventos','educacao','campeonatos','lojas','marcas','tecnologia','network','mercado','radar','busca','favoritos','cadastro','meu-perfil','admin','entrar','criar-conta','configurar-perfil','agendamentos','mensagens','perfil'];
+const ROUTES=['home','eventos','educacao','campeonatos','lojas','marcas','tecnologia','network','mercado','radar','busca','favoritos','cadastro','meu-perfil','admin','entrar','criar-conta','configurar-perfil','agendamentos','mensagens','perfil','profissional'];
 let routeSeq=0;
 async function route(){
   const seq=++routeSeq;
-  let r=(location.hash||'#home').slice(1);if(!ROUTES.includes(r))r='home';
+  let [r,arg]=(location.hash||'#home').slice(1).split('/');if(!ROUTES.includes(r))r='home';if(r==='profissional'&&!/^p\d+$/.test(arg||''))r='home';
   const redir=to=>{r=to;history.replaceState(null,'','#'+to)};
   if(!S.acc&&!AUTH_ROUTES.includes(r))redir('entrar');
   if(S.acc&&AUTH_ROUTES.includes(r))redir('home');
@@ -1164,14 +1257,14 @@ async function route(){
   if(r!=='mensagens')MSG.cur=null;
   CUR=r;document.body.classList.toggle('appmode',!AUTH_ROUTES.includes(r));
   if(AUTH_ROUTES.includes(r)){authPage(r);document.title=(r==='entrar'?'Entrar':'Criar conta')+' | Beauty Hub';return}
-  const pages={home:homePage,mercado:mercadoPage,network:netPage,radar:radarPage,busca:searchPage,favoritos:favPage,cadastro:signupPage,'meu-perfil':meuPerfil,admin:adminPage,'configurar-perfil':()=>setupPage(),agendamentos:agendaPage,mensagens:msgPage,perfil:perfilPage};
+  const pages={home:homePage,mercado:mercadoPage,network:netPage,radar:radarPage,busca:searchPage,favoritos:favPage,cadastro:signupPage,'meu-perfil':meuPerfil,admin:adminPage,'configurar-perfil':()=>setupPage(),agendamentos:agendaPage,mensagens:msgPage,perfil:perfilPage,profissional:()=>proPage(arg)};
   try{await (MODS[r]?modPage(r):pages[r]())}
   catch(e){
     if(seq!==routeSeq||e.status===401)return;
     app().innerHTML=header(r)+`<main class="wrap"><div class="empty-state mt40"><p>${esc(e.message||'Não foi possível carregar.')}</p><button class="btn" data-retry>Tentar de novo</button></div></main>`+footer();
   }
   if(seq!==routeSeq)return;
-  const t={home:'Beauty Hub',cadastro:'Cadastro | Beauty Hub','meu-perfil':'Meu perfil | Beauty Hub',admin:'Admin | Beauty Hub',busca:'Busca | Beauty Hub',favoritos:'Favoritos | Beauty Hub',mercado:'Mercado | Beauty Hub',network:'Network | Beauty Hub',radar:'Radar | Beauty Hub','configurar-perfil':(needSetup()?'Complete seu cadastro':'Editar perfil')+' | Beauty Hub',agendamentos:'Agendamentos | Beauty Hub',mensagens:'Mensagens | Beauty Hub',perfil:'Meu perfil | Beauty Hub'};
+  const t={home:'Beauty Hub',cadastro:'Cadastro | Beauty Hub','meu-perfil':'Meu perfil | Beauty Hub',admin:'Admin | Beauty Hub',busca:'Busca | Beauty Hub',favoritos:'Favoritos | Beauty Hub',mercado:'Mercado | Beauty Hub',network:'Network | Beauty Hub',radar:'Radar | Beauty Hub','configurar-perfil':(needSetup()?'Complete seu cadastro':'Editar perfil')+' | Beauty Hub',agendamentos:'Agendamentos | Beauty Hub',mensagens:'Mensagens | Beauty Hub',perfil:'Meu perfil | Beauty Hub',profissional:'Perfil | Beauty Hub'};
   document.title=t[r]||(MOD_NAME[r]+' | Beauty Hub');
   window.scrollTo(0,0);
 }

@@ -34,15 +34,16 @@ async function adminPage(){
     body=`<h2 style="font-size:28px">Avaliações</h2><div class="tw"><table><thead><tr><th>Avaliação</th><th>Sobre</th><th>Nota</th><th>Status</th><th>Ações</th></tr></thead><tbody>${rv.map(v=>`<tr><td><b style="font-weight:500">${esc(v.autor)}</b><br><small style="color:var(--muted)">${esc(v.texto||'Sem comentário')}</small></td><td>${esc(v.alvo)}</td><td>${v.nota}</td><td>${statusPill(v.status)}</td><td><div class="row-actions">${v.status==='aprovada'?`<button class="btn sm ghost" data-rev="${v.id}:removida">Remover</button>`:`<button class="btn sm" data-rev="${v.id}:aprovada">Restaurar</button>`}</div></td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--muted)">Nenhuma avaliação ainda.</td></tr>'}</tbody></table></div>
     <h2 style="font-size:28px;margin-top:32px">Conversas do Network</h2><div class="tw"><table><thead><tr><th>Pergunta</th><th>Autor</th><th>Ação</th></tr></thead><tbody>${th.map(t=>`<tr><td>${esc(t.question)}<br><small style="color:var(--muted)">${esc(t.tag)} · ${ago(t.created_at)}</small></td><td>${esc(t.autor)}</td><td><button class="btn sm ghost" data-delthread="${t.id}">${ic('trash')}Excluir</button></td></tr>`).join('')||'<tr><td colspan="3" style="text-align:center;color:var(--muted)">Nenhuma conversa.</td></tr>'}</tbody></table></div>`;
   }
+  if(A.tab==='mod'){const ps=(await GET('/api/admin/posts')).items;body+=`<h2 style="font-size:28px;margin-top:32px">Publicações</h2><div class="tw"><table><thead><tr><th>Publicação</th><th>Autora</th><th>Ação</th></tr></thead><tbody>${ps.map(x=>`<tr><td>${esc(x.texto||'(só foto)')}${x.photo?` <a href="${esc(x.photo)}" target="_blank" rel="noopener">foto</a>`:''}<br><small style="color:var(--muted)">${ago(x.created_at)}</small></td><td>${esc(x.autor)}</td><td><button class="btn sm ghost" data-adelpost="${x.id}">${ic('trash')}Excluir</button></td></tr>`).join('')||'<tr><td colspan="3" style="text-align:center;color:var(--muted)">Nenhuma publicação.</td></tr>'}</tbody></table></div>`}
   app().innerHTML=header('admin')+`<main class="wrap" style="padding-bottom:8px"><h1 class="pg-h1">Painel administrativo</h1><div class="tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" aria-selected="${A.tab===k}" data-atab="${k}">${l}${(k==='cad'&&ov.pending)||(k==='cont'&&ov.listingsPending)?` (${k==='cad'?ov.pending:ov.listingsPending})`:''}</button>`).join('')}</div>${body}</main>`+footer();
 }
 
 /* ===== Roteador ===== */
-const ROUTES=['home','eventos','educacao','campeonatos','lojas','marcas','tecnologia','network','mercado','radar','busca','favoritos','cadastro','meu-perfil','admin','entrar','criar-conta','configurar-perfil','agendamentos','mensagens','perfil'];
+const ROUTES=['home','eventos','educacao','campeonatos','lojas','marcas','tecnologia','network','mercado','radar','busca','favoritos','cadastro','meu-perfil','admin','entrar','criar-conta','configurar-perfil','agendamentos','mensagens','perfil','profissional'];
 let routeSeq=0;
 async function route(){
   const seq=++routeSeq;
-  let r=(location.hash||'#home').slice(1);if(!ROUTES.includes(r))r='home';
+  let [r,arg]=(location.hash||'#home').slice(1).split('/');if(!ROUTES.includes(r))r='home';if(r==='profissional'&&!/^p\d+$/.test(arg||''))r='home';
   const redir=to=>{r=to;history.replaceState(null,'','#'+to)};
   if(!S.acc&&!AUTH_ROUTES.includes(r))redir('entrar');
   if(S.acc&&AUTH_ROUTES.includes(r))redir('home');
@@ -51,14 +52,14 @@ async function route(){
   if(r!=='mensagens')MSG.cur=null;
   CUR=r;document.body.classList.toggle('appmode',!AUTH_ROUTES.includes(r));
   if(AUTH_ROUTES.includes(r)){authPage(r);document.title=(r==='entrar'?'Entrar':'Criar conta')+' | Beauty Hub';return}
-  const pages={home:homePage,mercado:mercadoPage,network:netPage,radar:radarPage,busca:searchPage,favoritos:favPage,cadastro:signupPage,'meu-perfil':meuPerfil,admin:adminPage,'configurar-perfil':()=>setupPage(),agendamentos:agendaPage,mensagens:msgPage,perfil:perfilPage};
+  const pages={home:homePage,mercado:mercadoPage,network:netPage,radar:radarPage,busca:searchPage,favoritos:favPage,cadastro:signupPage,'meu-perfil':meuPerfil,admin:adminPage,'configurar-perfil':()=>setupPage(),agendamentos:agendaPage,mensagens:msgPage,perfil:perfilPage,profissional:()=>proPage(arg)};
   try{await (MODS[r]?modPage(r):pages[r]())}
   catch(e){
     if(seq!==routeSeq||e.status===401)return;
     app().innerHTML=header(r)+`<main class="wrap"><div class="empty-state mt40"><p>${esc(e.message||'Não foi possível carregar.')}</p><button class="btn" data-retry>Tentar de novo</button></div></main>`+footer();
   }
   if(seq!==routeSeq)return;
-  const t={home:'Beauty Hub',cadastro:'Cadastro | Beauty Hub','meu-perfil':'Meu perfil | Beauty Hub',admin:'Admin | Beauty Hub',busca:'Busca | Beauty Hub',favoritos:'Favoritos | Beauty Hub',mercado:'Mercado | Beauty Hub',network:'Network | Beauty Hub',radar:'Radar | Beauty Hub','configurar-perfil':(needSetup()?'Complete seu cadastro':'Editar perfil')+' | Beauty Hub',agendamentos:'Agendamentos | Beauty Hub',mensagens:'Mensagens | Beauty Hub',perfil:'Meu perfil | Beauty Hub'};
+  const t={home:'Beauty Hub',cadastro:'Cadastro | Beauty Hub','meu-perfil':'Meu perfil | Beauty Hub',admin:'Admin | Beauty Hub',busca:'Busca | Beauty Hub',favoritos:'Favoritos | Beauty Hub',mercado:'Mercado | Beauty Hub',network:'Network | Beauty Hub',radar:'Radar | Beauty Hub','configurar-perfil':(needSetup()?'Complete seu cadastro':'Editar perfil')+' | Beauty Hub',agendamentos:'Agendamentos | Beauty Hub',mensagens:'Mensagens | Beauty Hub',perfil:'Meu perfil | Beauty Hub',profissional:'Perfil | Beauty Hub'};
   document.title=t[r]||(MOD_NAME[r]+' | Beauty Hub');
   window.scrollTo(0,0);
 }

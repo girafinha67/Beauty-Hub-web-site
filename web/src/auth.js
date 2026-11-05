@@ -7,23 +7,16 @@ Object.assign(ICONS,{
  eyeoff:'<path d="M3 3l18 18M10.6 6.2A9.6 9.6 0 0 1 12 5.5C18.4 5.5 22 12 22 12a17 17 0 0 1-3.2 3.9M6.6 7.7A17 17 0 0 0 2 12s3.6 6.5 10 6.5c1.6 0 3-.4 4.2-1M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
  chev:'<path d="m9 5 7 7-7 7"/>',
  back:'<path d="m15 5-7 7 7 7"/>',
- out:'<path d="M9 4H5v16h4M16 8l4 4-4 4M20 12H9"/>'
+ out:'<path d="M9 4H5v16h4M16 8l4 4-4 4M20 12H9"/>',
+ clock:'<circle cx="12" cy="13" r="7.5"/><path d="M12 9v4.5l3 1.5M9.5 3h5"/>',
+ chevd:'<path d="m5 9 7 7 7-7"/>',
+ share:'<circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="6" r="2.6"/><circle cx="18" cy="18" r="2.6"/><path d="m8.3 10.8 7.4-3.6M8.3 13.2l7.4 3.6"/>',
+ imgs:'<rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="10.5" r="1.8"/><path d="m4 18 5-4.5 3.5 3L16 13l4 4.5"/>',
+ ig:'<rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r=".8"/>'
 });
 const AUTH_ROUTES=['entrar','criar-conta'];
 const AU={obj:'encontrar',papel:'Cliente',nome:'',tel:'',doc:'',email:'',senha:'',aceite:false,err:{}};
-const emailOk=v=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
 const senhaOk=v=>v.length>=8&&/\d/.test(v)&&/[^A-Za-z0-9]/.test(v);
-const digits=v=>String(v||'').replace(/\D/g,'');
-function cpfOk(v){
-  v=digits(v);if(v.length!==11||/^(\d)\1+$/.test(v))return false;
-  for(const n of [9,10]){let s=0;for(let i=0;i<n;i++)s+=+v[i]*(n+1-i);const d=(s*10)%11%10;if(d!==+v[n])return false}
-  return true;
-}
-function cnpjOk(v){
-  v=digits(v);if(v.length!==14||/^(\d)\1+$/.test(v))return false;
-  for(const n of [12,13]){let s=0,p=n-7;for(let i=0;i<n;i++){s+=+v[i]*p--;if(p<2)p=9}const d=s%11<2?0:11-s%11;if(d!==+v[n])return false}
-  return true;
-}
 const maskTel=v=>{v=digits(v).slice(0,11);return v.length>10?`(${v.slice(0,2)}) ${v.slice(2,7)}-${v.slice(7)}`:v.length>6?`(${v.slice(0,2)}) ${v.slice(2,6)}-${v.slice(6)}`:v.length>2?`(${v.slice(0,2)}) ${v.slice(2)}`:v};
 const maskDoc=(v,cnpj)=>{v=digits(v).slice(0,cnpj?14:11);
   if(v.length>11)return v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})$/,'$1.$2.$3/$4-$5').replace(/[-/.]$/,'');
@@ -103,24 +96,59 @@ document.addEventListener('input',e=>{
 });
 document.addEventListener('change',e=>{const t=e.target;if(t.dataset&&t.dataset.au==='papel')AU.papel=t.value});
 
+/* ----- conferência de cada campo ao sair dele (nome, CPF/CNPJ e e-mail) ----- */
+function setField(inp,msg,ok){
+  if(!inp)return;const af=inp.closest('.af'),box=inp.closest('.inp');
+  box.classList.toggle('bad',!!msg);box.classList.toggle('good',!msg&&!!ok);
+  let er=af.querySelector('.err');
+  if(msg){if(!er){er=document.createElement('div');er.className='err';er.setAttribute('role','alert');af.appendChild(er)}er.textContent=msg}
+  else if(er)er.remove();
+  let ck=box.querySelector('.okmark');
+  if(!msg&&ok){if(!ck){ck=document.createElement('span');ck.className='okmark';ck.setAttribute('aria-hidden','true');ck.innerHTML=ic('check');box.appendChild(ck)}}else if(ck)ck.remove();
+}
+const CHK={};
+document.addEventListener('focusout',async e=>{
+  const t=e.target,k=t.dataset&&t.dataset.au;
+  if(t.id==='l-email'){const v=t.value.trim().toLowerCase();if(v)setField(t,emailErro(v,{login:true}));return}
+  if(!k||!['nome','doc','email'].includes(k)||!t.value.trim())return;
+  const v=t.value.trim(),enc=AU.obj==='encontrar';let msg='',remote=null;
+  if(k==='nome')msg=nomeErro(v);
+  if(k==='email'){msg=emailErro(v);if(!msg)remote=v.toLowerCase()}
+  if(k==='doc'){const d=digits(v);
+    if(d.length===11)msg=cpfOk(d)?'':'CPF inválido. Confira os números.';
+    else if(d.length===14)msg=enc?'Para este perfil, informe o CPF.':cnpjOk(d)?'':'CNPJ inválido. Confira os números.';
+    else msg=enc?'Digite os 11 números do CPF.':'Digite os 11 números do CPF ou os 14 do CNPJ.';
+    if(!msg&&d.length===14)remote=d}
+  if(msg){AU.err[k]=msg;setField(t,msg);return}
+  if(remote){
+    const seq=CHK[k]=(CHK[k]||0)+1;
+    try{const r=await POST('/api/validate',{campo:k,valor:remote});if(seq!==CHK[k]||t.value.trim()!==v)return;
+      if(!r.ok){AU.err[k]=r.msg;setField(t,r.msg);return}}
+    catch(er){/* sem conexão: o servidor confere de novo ao criar a conta */}
+  }
+  delete AU.err[k];setField(t,'',true);
+});
+
 document.addEventListener('submit',async e=>{
   const f=e.target;
   if(f.id==='login-form'){
     e.preventDefault();
     const em=$('#l-email').value.trim().toLowerCase(),pw=$('#l-senha').value;AU.email=em;
     const box=$('#l-err');
-    if(!emailOk(em)||!pw){box.textContent='Informe seu e-mail e sua senha.';return}
+    box.textContent='';
+    const ee=!em?'Informe seu e-mail.':emailErro(em,{login:true});
+    if(ee||!pw){setField($('#l-email'),ee||'');if(!ee)box.textContent='Informe sua senha.';(ee?$('#l-email'):$('#l-senha')).focus();return}
     try{applyMe(await POST('/api/auth/login',{email:em,senha:pw}))}catch(er){box.textContent=er.message;return}
     AU.senha='';toast('Bem-vinda, '+firstName()+'!');startPolling();go('home');
   }
   if(f.id==='signup-form'){
     e.preventDefault();
     const E={},enc=AU.obj==='encontrar';
-    if(AU.nome.trim().split(/\s+/).filter(Boolean).length<2||AU.nome.trim().length<5)E.nome='Informe seu nome completo.';
+    const ne=nomeErro(AU.nome);if(ne)E.nome=ne;
     const tel=digits(AU.tel);if(tel.length<10||tel.length>11)E.tel='Informe o telefone com DDD.';
     if(enc?!cpfOk(AU.doc):!(cpfOk(AU.doc)||cnpjOk(AU.doc)))E.doc=enc?'CPF inválido. Confira os números.':'CPF ou CNPJ inválido. Confira os números.';
     const em=AU.email.trim().toLowerCase();
-    if(!emailOk(em))E.email='Informe um e-mail válido, como nome@email.com.';
+    const ee2=emailErro(em);if(ee2)E.email=ee2;
     if(!senhaOk(AU.senha))E.senha='A senha precisa de 8 caracteres, um número e um caractere especial.';
     if(!AU.aceite)E.aceite='Aceite os termos para continuar.';
     if(!Object.keys(E).length){
@@ -128,14 +156,14 @@ document.addEventListener('submit',async e=>{
       catch(er){Object.assign(E,er.fields||{});if(!Object.keys(E).length)E.form=er.message}
     }
     AU.err=E;
-    if(Object.keys(E).length){signupAuthPage();const first=$('.err');first&&first.closest('.af,.ck2')?.querySelector('input,select')?.focus();return}
+    if(Object.keys(E).length){AU.ok={};signupAuthPage();const first=$('.err');first&&first.closest('.af,.ck2')?.querySelector('input,select')?.focus();return}
     Object.assign(AU,{senha:'',aceite:false,err:{}});
     toast('Conta criada com sucesso!');startPolling();go('configurar-perfil');
   }
   if(f.id==='forgot-form'){
     e.preventDefault();
     const em=$('#fg-email').value.trim().toLowerCase(),box=$('#fg-err');
-    if(!emailOk(em)){box.textContent='Informe um e-mail válido.';return}
+    const fe=emailErro(em,{login:true});if(fe){box.textContent=fe;return}
     try{await POST('/api/auth/forgot',{email:em})}catch(er){box.textContent=er.message;return}
     AU.email=em;closeSheet();toast('Se esse e-mail tiver conta, enviamos o link para criar uma nova senha.');
   }

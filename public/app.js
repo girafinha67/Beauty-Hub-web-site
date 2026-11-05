@@ -1,3 +1,59 @@
+/* Regras de validação compartilhadas: o MESMO arquivo roda no servidor (require) e no navegador (build.py embute no app.js). */
+const digits = v => String(v == null ? '' : v).replace(/\D/g, '');
+function cpfOk(v) {
+  v = digits(v); if (v.length !== 11 || /^(\d)\1+$/.test(v)) return false;
+  for (const n of [9, 10]) { let s = 0; for (let i = 0; i < n; i++) s += +v[i] * (n + 1 - i); if ((s * 10) % 11 % 10 !== +v[n]) return false; }
+  return true;
+}
+function cnpjOk(v) {
+  v = digits(v); if (v.length !== 14 || /^(\d)\1+$/.test(v)) return false;
+  for (const n of [12, 13]) { let s = 0, p = n - 7; for (let i = 0; i < n; i++) { s += +v[i] * p--; if (p < 2) p = 9; } const d = s % 11 < 2 ? 0 : 11 - s % 11; if (d !== +v[n]) return false; }
+  return true;
+}
+/* Nome completo: só letras, ao menos nome + sobrenome, sem lixo tipo "aaa bbb" ou "teste teste". Devolve '' se ok, senão a mensagem. */
+const NOME_MSG = 'Informe seu nome completo (nome e sobrenome, só letras).';
+const PARTICULAS = ['de', 'da', 'do', 'das', 'dos', 'e', 'di', 'du', 'del', 'la', 'van', 'von', 'bin', 'al'];
+const NOME_FALSO = ['teste', 'test', 'asdf', 'asdfg', 'qwerty', 'fulano', 'ciclano', 'beltrano', 'nome', 'sobrenome', 'xxxx', 'abcd', 'aaaa', 'usuario'];
+function nomeErro(v) {
+  const n = String(v == null ? '' : v).trim().replace(/\s+/g, ' ');
+  if (n.length < 5 || n.length > 120) return NOME_MSG;
+  if (!/^\p{L}[\p{L}'’.\- ]*$/u.test(n)) return 'O nome deve ter só letras, sem números ou símbolos.';
+  const ws = n.split(' ').filter(Boolean), sig = ws.filter(w => !PARTICULAS.includes(w.toLowerCase()));
+  if (sig.length < 2 || sig.some(w => w.replace(/[^\p{L}]/gu, '').length < 2)) return NOME_MSG;
+  if (!sig.some(w => w.replace(/[^\p{L}]/gu, '').length >= 3)) return NOME_MSG;
+  for (const w of sig) {
+    const l = w.toLowerCase().replace(/[^\p{L}]/gu, '');
+    if (/(.)\1{2,}/u.test(l) || (l.length >= 3 && !/[aeiouyáéíóúâêôãõàü]/.test(l)) || NOME_FALSO.includes(l)) return 'Esse nome não parece real. Digite seu nome completo como no documento.';
+  }
+  if (new Set(sig.map(w => w.toLowerCase())).size < 2) return 'Esse nome não parece real. Digite seu nome completo como no documento.';
+  return '';
+}
+/* E-mail: sintaxe, regras próprias do Gmail, erros de digitação comuns e e-mails descartáveis.
+   { login:true } só confere a sintaxe (não bloqueia contas antigas). Existência do domínio (DNS) é conferida no servidor. */
+const TYPOS = { 'gmial.com': 'gmail.com', 'gmal.com': 'gmail.com', 'gmail.con': 'gmail.com', 'gmail.com.br': 'gmail.com', 'gnail.com': 'gmail.com', 'gmaill.com': 'gmail.com', 'gmail.co': 'gmail.com', 'gamil.com': 'gmail.com', 'gimail.com': 'gmail.com', 'hotmial.com': 'hotmail.com', 'hotmal.com': 'hotmail.com', 'hotmail.con': 'hotmail.com', 'outlok.com': 'outlook.com', 'outlook.con': 'outlook.com', 'yaho.com': 'yahoo.com', 'yahooo.com': 'yahoo.com', 'icloud.con': 'icloud.com' };
+const DESCARTAVEIS = ['mailinator.com', '10minutemail.com', 'tempmail.com', 'temp-mail.org', 'guerrillamail.com', 'yopmail.com', 'trashmail.com', 'sharklasers.com', 'getnada.com', 'throwawaymail.com', 'maildrop.cc', 'dispostable.com'];
+const EMAIL_MSG = 'Informe um e-mail válido, como nome@gmail.com.';
+function emailErro(v, o) {
+  const e = String(v == null ? '' : v).trim().toLowerCase();
+  if (!e || e.length > 160) return EMAIL_MSG;
+  const m = e.match(/^([^@\s]+)@([^@\s]+)$/);
+  if (!m) return EMAIL_MSG;
+  const [, local, dom] = m;
+  if (local.length > 64 || !/^[a-z0-9._%+\-]+$/.test(local) || /^\.|\.$|\.\./.test(local)) return EMAIL_MSG;
+  const labels = dom.split('.');
+  if (labels.length < 2 || labels.some(l => !l || l.length > 63 || !/^[a-z0-9-]+$/.test(l) || /^-|-$/.test(l)) || !/^[a-z]{2,}$/.test(labels[labels.length - 1])) return EMAIL_MSG;
+  if (o && o.login) return '';
+  if (TYPOS[dom]) return `Esse e-mail parece ter um erro. Você quis dizer ${local}@${TYPOS[dom]}?`;
+  if (DESCARTAVEIS.includes(dom)) return 'Use um e-mail pessoal. E-mails temporários não são aceitos.';
+  if (dom === 'gmail.com' || dom === 'googlemail.com') {
+    const base = local.split('+')[0];
+    if (base.length < 6 || base.length > 30 || !/^[a-z0-9.]+$/.test(base) || /^\.|\.$|\.\./.test(base) || !/[a-z]/.test(base)) return 'Esse endereço do Gmail não é válido. Ele tem de 6 a 30 letras ou números (pode ter pontos).';
+  }
+  return '';
+}
+const emailOk = v => !emailErro(v, { login: true });
+if (typeof module !== 'undefined') module.exports = { digits, cpfOk, cnpjOk, nomeErro, emailErro, emailOk, NOME_MSG, EMAIL_MSG };
+
 /* ===== Listas fixas da interface (opções de formulários). Nenhum dado de exemplo: tudo o que é conteúdo vem do servidor. ===== */
 const PROFILE_TYPES = [
  {id:'profissional',icon:'user',name:'Profissional',sub:'Lash, brows, estética e mais'},
@@ -184,13 +240,7 @@ function card(it){
    <ul class="meta">${metaOf(it).map(([i,t])=>`<li>${ic(i)}<span>${esc(t)}</span></li>`).join('')}</ul>
    <div class="card-f">${rate}<span class="more">Ver detalhes ${ic('arrow')}</span></div></article>`;
 }
-function proCard(p){
-  const f=S.follows.includes(p.id);
-  return `<article class="card" data-xpro="${p.id}">
-   <div class="mini">${avatarHTML(p.photo,p.name,'lg')}<div class="grow"><h3 style="padding:0;font-size:28px"><button data-xpro="${p.id}">${esc(p.name)}</button></h3><small>${esc(p.role)}${p.verified?` · <span class="verified">${ic('shield')}Verificada</span>`:''}</small></div></div>
-   <ul class="meta"><li>${ic('pin')}<span>${esc(p.city)}</span></li></ul>
-   <div class="card-f">${p.rating?`<span class="rate">${ic('star','fill')} ${rateTxt(p)} <span>(${p.reviews})</span></span>`:'<span class="novo">Novo</span>'}<button class="btn sm" data-follow="${p.id}" aria-pressed="${f}">${f?'Seguindo':'Seguir'}</button></div></article>`;
-}
+function proCard(p){return proCardApp(p)}
 /* Detalhe decorativo: uma linha de cílios, bem discreta. */
 function lashArc(){
   let l='',lid='';
@@ -514,23 +564,16 @@ Object.assign(ICONS,{
  eyeoff:'<path d="M3 3l18 18M10.6 6.2A9.6 9.6 0 0 1 12 5.5C18.4 5.5 22 12 22 12a17 17 0 0 1-3.2 3.9M6.6 7.7A17 17 0 0 0 2 12s3.6 6.5 10 6.5c1.6 0 3-.4 4.2-1M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
  chev:'<path d="m9 5 7 7-7 7"/>',
  back:'<path d="m15 5-7 7 7 7"/>',
- out:'<path d="M9 4H5v16h4M16 8l4 4-4 4M20 12H9"/>'
+ out:'<path d="M9 4H5v16h4M16 8l4 4-4 4M20 12H9"/>',
+ clock:'<circle cx="12" cy="13" r="7.5"/><path d="M12 9v4.5l3 1.5M9.5 3h5"/>',
+ chevd:'<path d="m5 9 7 7 7-7"/>',
+ share:'<circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="6" r="2.6"/><circle cx="18" cy="18" r="2.6"/><path d="m8.3 10.8 7.4-3.6M8.3 13.2l7.4 3.6"/>',
+ imgs:'<rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="10.5" r="1.8"/><path d="m4 18 5-4.5 3.5 3L16 13l4 4.5"/>',
+ ig:'<rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17" cy="7" r=".8"/>'
 });
 const AUTH_ROUTES=['entrar','criar-conta'];
 const AU={obj:'encontrar',papel:'Cliente',nome:'',tel:'',doc:'',email:'',senha:'',aceite:false,err:{}};
-const emailOk=v=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
 const senhaOk=v=>v.length>=8&&/\d/.test(v)&&/[^A-Za-z0-9]/.test(v);
-const digits=v=>String(v||'').replace(/\D/g,'');
-function cpfOk(v){
-  v=digits(v);if(v.length!==11||/^(\d)\1+$/.test(v))return false;
-  for(const n of [9,10]){let s=0;for(let i=0;i<n;i++)s+=+v[i]*(n+1-i);const d=(s*10)%11%10;if(d!==+v[n])return false}
-  return true;
-}
-function cnpjOk(v){
-  v=digits(v);if(v.length!==14||/^(\d)\1+$/.test(v))return false;
-  for(const n of [12,13]){let s=0,p=n-7;for(let i=0;i<n;i++){s+=+v[i]*p--;if(p<2)p=9}const d=s%11<2?0:11-s%11;if(d!==+v[n])return false}
-  return true;
-}
 const maskTel=v=>{v=digits(v).slice(0,11);return v.length>10?`(${v.slice(0,2)}) ${v.slice(2,7)}-${v.slice(7)}`:v.length>6?`(${v.slice(0,2)}) ${v.slice(2,6)}-${v.slice(6)}`:v.length>2?`(${v.slice(0,2)}) ${v.slice(2)}`:v};
 const maskDoc=(v,cnpj)=>{v=digits(v).slice(0,cnpj?14:11);
   if(v.length>11)return v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})$/,'$1.$2.$3/$4-$5').replace(/[-/.]$/,'');
@@ -610,24 +653,59 @@ document.addEventListener('input',e=>{
 });
 document.addEventListener('change',e=>{const t=e.target;if(t.dataset&&t.dataset.au==='papel')AU.papel=t.value});
 
+/* ----- conferência de cada campo ao sair dele (nome, CPF/CNPJ e e-mail) ----- */
+function setField(inp,msg,ok){
+  if(!inp)return;const af=inp.closest('.af'),box=inp.closest('.inp');
+  box.classList.toggle('bad',!!msg);box.classList.toggle('good',!msg&&!!ok);
+  let er=af.querySelector('.err');
+  if(msg){if(!er){er=document.createElement('div');er.className='err';er.setAttribute('role','alert');af.appendChild(er)}er.textContent=msg}
+  else if(er)er.remove();
+  let ck=box.querySelector('.okmark');
+  if(!msg&&ok){if(!ck){ck=document.createElement('span');ck.className='okmark';ck.setAttribute('aria-hidden','true');ck.innerHTML=ic('check');box.appendChild(ck)}}else if(ck)ck.remove();
+}
+const CHK={};
+document.addEventListener('focusout',async e=>{
+  const t=e.target,k=t.dataset&&t.dataset.au;
+  if(t.id==='l-email'){const v=t.value.trim().toLowerCase();if(v)setField(t,emailErro(v,{login:true}));return}
+  if(!k||!['nome','doc','email'].includes(k)||!t.value.trim())return;
+  const v=t.value.trim(),enc=AU.obj==='encontrar';let msg='',remote=null;
+  if(k==='nome')msg=nomeErro(v);
+  if(k==='email'){msg=emailErro(v);if(!msg)remote=v.toLowerCase()}
+  if(k==='doc'){const d=digits(v);
+    if(d.length===11)msg=cpfOk(d)?'':'CPF inválido. Confira os números.';
+    else if(d.length===14)msg=enc?'Para este perfil, informe o CPF.':cnpjOk(d)?'':'CNPJ inválido. Confira os números.';
+    else msg=enc?'Digite os 11 números do CPF.':'Digite os 11 números do CPF ou os 14 do CNPJ.';
+    if(!msg&&d.length===14)remote=d}
+  if(msg){AU.err[k]=msg;setField(t,msg);return}
+  if(remote){
+    const seq=CHK[k]=(CHK[k]||0)+1;
+    try{const r=await POST('/api/validate',{campo:k,valor:remote});if(seq!==CHK[k]||t.value.trim()!==v)return;
+      if(!r.ok){AU.err[k]=r.msg;setField(t,r.msg);return}}
+    catch(er){/* sem conexão: o servidor confere de novo ao criar a conta */}
+  }
+  delete AU.err[k];setField(t,'',true);
+});
+
 document.addEventListener('submit',async e=>{
   const f=e.target;
   if(f.id==='login-form'){
     e.preventDefault();
     const em=$('#l-email').value.trim().toLowerCase(),pw=$('#l-senha').value;AU.email=em;
     const box=$('#l-err');
-    if(!emailOk(em)||!pw){box.textContent='Informe seu e-mail e sua senha.';return}
+    box.textContent='';
+    const ee=!em?'Informe seu e-mail.':emailErro(em,{login:true});
+    if(ee||!pw){setField($('#l-email'),ee||'');if(!ee)box.textContent='Informe sua senha.';(ee?$('#l-email'):$('#l-senha')).focus();return}
     try{applyMe(await POST('/api/auth/login',{email:em,senha:pw}))}catch(er){box.textContent=er.message;return}
     AU.senha='';toast('Bem-vinda, '+firstName()+'!');startPolling();go('home');
   }
   if(f.id==='signup-form'){
     e.preventDefault();
     const E={},enc=AU.obj==='encontrar';
-    if(AU.nome.trim().split(/\s+/).filter(Boolean).length<2||AU.nome.trim().length<5)E.nome='Informe seu nome completo.';
+    const ne=nomeErro(AU.nome);if(ne)E.nome=ne;
     const tel=digits(AU.tel);if(tel.length<10||tel.length>11)E.tel='Informe o telefone com DDD.';
     if(enc?!cpfOk(AU.doc):!(cpfOk(AU.doc)||cnpjOk(AU.doc)))E.doc=enc?'CPF inválido. Confira os números.':'CPF ou CNPJ inválido. Confira os números.';
     const em=AU.email.trim().toLowerCase();
-    if(!emailOk(em))E.email='Informe um e-mail válido, como nome@email.com.';
+    const ee2=emailErro(em);if(ee2)E.email=ee2;
     if(!senhaOk(AU.senha))E.senha='A senha precisa de 8 caracteres, um número e um caractere especial.';
     if(!AU.aceite)E.aceite='Aceite os termos para continuar.';
     if(!Object.keys(E).length){
@@ -635,14 +713,14 @@ document.addEventListener('submit',async e=>{
       catch(er){Object.assign(E,er.fields||{});if(!Object.keys(E).length)E.form=er.message}
     }
     AU.err=E;
-    if(Object.keys(E).length){signupAuthPage();const first=$('.err');first&&first.closest('.af,.ck2')?.querySelector('input,select')?.focus();return}
+    if(Object.keys(E).length){AU.ok={};signupAuthPage();const first=$('.err');first&&first.closest('.af,.ck2')?.querySelector('input,select')?.focus();return}
     Object.assign(AU,{senha:'',aceite:false,err:{}});
     toast('Conta criada com sucesso!');startPolling();go('configurar-perfil');
   }
   if(f.id==='forgot-form'){
     e.preventDefault();
     const em=$('#fg-email').value.trim().toLowerCase(),box=$('#fg-err');
-    if(!emailOk(em)){box.textContent='Informe um e-mail válido.';return}
+    const fe=emailErro(em,{login:true});if(fe){box.textContent=fe;return}
     try{await POST('/api/auth/forgot',{email:em})}catch(er){box.textContent=er.message;return}
     AU.email=em;closeSheet();toast('Se esse e-mail tiver conta, enviamos o link para criar uma nova senha.');
   }
@@ -869,13 +947,29 @@ async function loadPros(){
  if(seq===loadSeq)PROS_LIST=remember(r.items);
 }
 const homeList=()=>PROS_LIST;
+const backTxt=m=>m==null?'':m<60?`Volto em ${Math.max(1,m)} min`:m<2880?`Volto em ${Math.round(m/60)} ${Math.round(m/60)===1?'hora':'horas'}`:`Volto em ${Math.round(m/1440)} dias`;
+const atendTxt=a=>a==='domicilio'?'A domicílio':a==='ambos'?'Local e domicílio':'Com local';
+const tagline=p=>{const t=String(p.bio||'').replace(/\s+/g,' ').trim();return t||p.role};
+/* Card da profissional: foto grande à esquerda, situação do expediente, preço, avaliações, atendimento, fotos e local. */
 function proCardApp(p){
- const f=S.favs.includes(p.id),top=p.services.slice(0,2).map(s=>s.n.replace('Extensão de cílios – ','')),mp=minPrice(p);
- return `<article class="pc" data-xpro="${p.id}" tabindex="0" role="button" aria-label="Ver ${esc(p.name)}">
-  ${p.cover?`<img class="pc-cv" src="${esc(p.cover)}" alt="" loading="lazy">`:avatarHTML(p.photo,p.name)}<div class="pc-b"><h3>${esc(p.name)}${p.own?' <em>você</em>':''}</h3><small>${esc(p.role)}${p.verified?` · <span class="verified">${ic('shield')}Verificada</span>`:''}</small>
-  <div class="pc-m">${p.rating?`<span class="rate">${ic('star','fill')} ${rateTxt(p)} <span>(${p.reviews})</span></span>`:'<span class="novo">Novo</span>'}<span>${ic('pin')}${esc(p.city)}</span></div>
-  <div class="pc-t">${top.map(t=>`<span>${esc(t)}</span>`).join('')}</div></div>
-  <div class="pc-r"><button class="pc-fav ${f?'on':''}" data-fav="${p.id}" aria-pressed="${f}" aria-label="${f?'Remover dos favoritos':'Salvar nos favoritos'}">${ic('heart')}</button>${mp<1e9?`<small>a partir de</small><b>${brl0(mp)}</b>`:''}</div></article>`;
+ const f=S.favs.includes(p.id),mp=minPrice(p),cheap=p.services.slice().sort((a,b)=>a.p-b.p)[0],h=p.hours||{open:false,back:null};
+ const pill=h.open?`<span class="pk-pill on">${ic('clock')}Atende até ${esc(h.until)}</span>`:(h.back==null?'':`<span class="pk-pill">${ic('clock')}${backTxt(h.back)}</span>`);
+ const pic=p.photo||p.cover;
+ return `<article class="pk" data-xpro="${p.id}" tabindex="0" role="button" aria-label="Ver ${esc(p.name)}">
+  <div class="pk-ph">${pic?`<img src="${esc(pic)}" alt="" loading="lazy">`:`<span class="ini">${esc(initials(p.name))}</span>`}
+   <button class="pc-fav ${f?'on':''}" data-fav="${p.id}" aria-pressed="${f}" aria-label="${f?'Remover dos favoritos':'Salvar nos favoritos'}">${ic('heart')}</button></div>
+  <div class="pk-b">
+   <span class="pk-st ${h.open?'on':''}"><i></i>${h.open?'Atendendo agora':'Fora do expediente'}</span>
+   ${pill}
+   <p class="pk-tag">${esc(tagline(p))}</p>
+   <h3>${esc(p.name)}${p.own?' <em>você</em>':''}${p.verified?`<span class="pk-ok" title="Perfil verificado">${ic('shield')}</span>`:''}</h3>
+   ${mp<1e9?`<span class="pk-from">A partir de</span><button class="pk-price" data-xsvc aria-expanded="false" aria-label="Ver valores dos serviços">${brl0(mp)}${ic('chevd')}</button><span class="pk-dur">${durTxt(cheap.d)}</span>
+   <ul class="pk-svc">${p.services.map(s=>`<li><span>${esc(s.n.replace('Extensão de cílios – ',''))}</span><b>${brl0(s.p)}</b></li>`).join('')}</ul>`:''}
+   <span class="pk-rev">${ic('star','fill')}${p.rating?`<b>${rateTxt(p)}</b> <small>(${p.reviews})</small>`:''}<u data-xrev="${p.id}">Ver avaliações</u></span>
+   <div class="pk-i"><span>${ic('idcard')}${p.anos?esc(p.anos):'Novo no app'}</span><span>${ic('home')}${atendTxt(p.atend)}</span></div>
+   <div class="pk-i"><span>${ic('imgs')}${p.photos?p.photos+(p.photos===1?' foto':' fotos'):'Sem fotos'}</span></div>
+   <div class="pk-i pk-loc"><span>${ic('pin')}${esc(p.hood?p.hood+' · '+p.city:p.city)}</span></div>
+  </div></article>`;
 }
 function homeListHTML(){
  const L=homeList(),show=(H.all||DESK())?L:L.slice(0,4);
@@ -1065,6 +1159,8 @@ function perfilPage(){
 document.addEventListener('click',e=>{
  const t=e.target;let el;
  if(t.closest('[data-fav]'))return;
+ if(el=t.closest('[data-xsvc]')){const c=el.closest('.pk'),o=!c.classList.contains('open');c.classList.toggle('open',o);el.setAttribute('aria-expanded',o);return}
+ if(el=t.closest('[data-xrev]')){PP.tab='aval';PP.keep=1;closeSheet();go('profissional/'+el.dataset.xrev);return}
  if(t.closest('[data-xback]')){if(needSetup()){logout();toast('Você saiu da conta')}else go('perfil');return}
  if(t.closest('[data-xnotif]')){openNotifs();return}
  if(t.closest('[data-xmore]')){openMore();return}
@@ -1112,7 +1208,7 @@ document.addEventListener('change',e=>{
  if(d.xsvc){const [i,f]=d.xsvc.split(':');P.services[+i][f]=t.value;return}
  if(d.px==='mesmo'){P.mesmo=t.checked;setupPage(true)}
 });
-document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('.pc[data-xpro]')){e.preventDefault();PP.tab='pubs';go('profissional/'+e.target.dataset.xpro)}});
+document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('.pc[data-xpro],.pk[data-xpro]')){e.preventDefault();PP.tab='pubs';go('profissional/'+e.target.dataset.xpro)}});
 
 /* ===== Página da profissional (abas Publicações / Sobre / Avaliações) e publicações ===== */
 const PP={id:'',tab:'pubs'};
@@ -1125,14 +1221,14 @@ function postCard(p,who){
    ${p.texto?`<p>${esc(p.texto)}</p>`:''}${p.photo?`<img src="${esc(p.photo)}" alt="Foto da publicação de ${esc(who.name)}" loading="lazy">`:''}</article>`;
 }
 async function proPage(id){
-  if(id&&id!==PP.id){PP.id=id;PP.tab='pubs'}
+  if(id&&id!==PP.id){PP.id=id;if(!PP.keep)PP.tab='pubs'}PP.keep=0;
   const p=await GET('/api/pros/'+PP.id);CACHE.set(p.id,p);
   const svc=p.services.slice().sort((a,b)=>a.p-b.p)[0],today=new Date().getDay(),at=(ATEND.find(x=>x[0]===p.atend)||[])[1]||'';
-  const tabs=[['pubs','Publicações'],['sobre','Sobre'],['aval','Avaliações']];
+  const tabs=[['pubs','Fotos e posts'],['sobre','Sobre mim'],['aval','Avaliações']];
   const last=(p.reviewList||[])[0],tot=p.reviews||0,dist=p.dist||{};
   let body='';
   if(PP.tab==='pubs'){
-    body=`${p.gallery.length?`<h2 class="pp-h">${ic('camera')}Galeria de fotos</h2><div class="gal ro">${p.gallery.map(u=>`<div><img src="${esc(u)}" alt="Trabalho de ${esc(p.name)}" loading="lazy"></div>`).join('')}</div>`:''}
+    body=`<h2 class="pp-h pp-gh">${ic('camera')}<span>Galeria de fotos</span></h2>${p.gallery.length?`<div class="gal ro">${p.gallery.map(u=>`<div><img src="${esc(u)}" alt="Trabalho de ${esc(p.name)}" loading="lazy"></div>`).join('')}</div>`:`<p class="pp-empty">${ic('info')}<span>Perfil <b>não possui</b> fotos na sua galeria!</span></p>`}
      <h2 class="pp-h">Publicações</h2>${p.posts.length?`<div class="posts">${p.posts.map(x=>postCard(x,p)).join('')}</div>`:`<div class="empty-state">${p.own?'Você ainda não publicou. Crie sua primeira publicação em Meu perfil.':'Esta profissional ainda não fez publicações.'}</div>`}`;
   }
   if(PP.tab==='sobre'){
@@ -1152,18 +1248,48 @@ async function proPage(id){
      ${list.length?`<h3 class="pp-h2">Mais recentes</h3><div class="stack">${list.map(r=>`<div class="pp-rev"><div class="av">${esc(initials(r.autor))}</div><div><b>${esc(r.autor)}</b><small>${ago(r.at)}</small><div class="rate">${r.nota} ${ic('star','fill')} ${NOTA_L[r.nota]||''}</div>${r.texto?`<p>${esc(r.texto)}</p>`:''}</div></div>`).join('')}</div>`:''}`;
   }
   const ext=(h,l)=>`<a class="btn ghost" href="${esc(h)}" target="_blank" rel="noopener noreferrer">${l}</a>`;
+  const fav=S.favs.includes(p.id),hs=p.hours||{open:false},tag=String(p.bio||'').replace(/\s+/g,' ').trim().slice(0,70)||p.role;
+  const loc=[p.hood,p.city].filter(Boolean).join(' · ');
+  const revs=(p.reviewList||[]).slice(0,10);
+  const main=p.agenda?`<a class="pp-cta" href="${esc(p.agenda)}" target="_blank" rel="noopener noreferrer">${ic('cal')}Ver agenda online</a>`
+   :p.wa?`<a class="pp-cta" href="https://wa.me/${esc(p.wa)}" target="_blank" rel="noopener noreferrer">${ic('chat')}Chamar no WhatsApp</a>`
+   :(!p.own?`<button class="pp-cta" data-msg="${p.acc}">${ic('chat')}Enviar mensagem</button>`:'');
+  const subs=[p.role,p.anos&&'Experiência: '+p.anos].filter(Boolean);
   app().innerHTML=header('profissional',{nobar:true})+`<main class="wrap pp">
-   <div class="pp-cover"></div>
-   <div class="pp-id">${avatarHTML(p.photo,p.name,'xl')}<div><h1>${esc(p.name)}</h1><small>${esc(p.role)} · ${esc(p.city)}</small>${p.verified?`<span class="pp-ver">${ic('shield')}Perfil verificado</span>`:''}</div></div>
-   ${tot?`<div class="pp-rec"><div class="pp-rec-h"><span>Avaliações recentes</span><span class="rate">${ic('star','fill')} ${rateTxt(p)} <span>(${tot})</span></span></div>
-     <div class="pp-rec-b">${last?`<div class="pp-mini"><b>${last.nota} ★ · ${ago(last.at)}</b><span>${esc((last.texto||NOTA_L[last.nota]||'').slice(0,60))}</span></div>`:''}<button class="btn ghost" data-pptab="aval">Ler avaliações</button></div></div>`:''}
-   <div class="pp-info"><div class="pp-box"><small>${ic('tag')} Valores</small><span>a partir de</span><b class="pr">${svc?brl0(svc.p):'—'}</b><span>${svc?durTxt(svc.d):''}</span></div>
-    <div class="pp-box"><small>${ic('pin')} Localização</small><b>${esc(p.city)}</b><span>${esc(at)}</span></div></div>
-   <div class="row-actions">${p.own?'':`<button class="btn ghost" data-msg="${p.acc}">${ic('chat')}Mensagem</button>`}${p.wa?ext('https://wa.me/'+p.wa,ic('chat')+'WhatsApp'):''}${p.ig?ext('https://instagram.com/'+p.ig,'Instagram'):''}${p.agenda?ext(p.agenda,ic('cal')+'Agenda online'):''}${favBtn(p.id)}</div>
+   <div class="pp-cover"><span class="wm">BH</span>
+    <div class="pp-ctl"><button class="pp-rb" data-back aria-label="Voltar">${ic('back')}</button><span class="sp"></span>
+     <button class="pp-rb" data-share aria-label="Compartilhar perfil">${ic('share')}</button>
+     <button class="pp-rb fv ${fav?'on':''}" data-fav="${p.id}" aria-pressed="${fav}" aria-label="${fav?'Remover dos favoritos':'Salvar nos favoritos'}">${ic('heart')}</button></div></div>
+   <div class="pp-id2"><div class="pp-avw">${avatarHTML(p.photo,p.name,'xl')}<i class="dot ${hs.open?'on':''}" title="${hs.open?'Atendendo agora':'Fora do expediente'}"></i></div>
+    <div class="pp-bub"><span>${esc(tag)}</span></div>
+    <h1>${esc(p.name)}</h1>
+    <div class="pp-sub">${subs.map(t=>`<span>${esc(t)}</span>`).join('<i>•</i>')}<i>•</i><span class="fl">${ic('users')}${p.followers||0}</span></div>
+    ${p.verified?`<span class="pp-ver">Documentos verificados ${ic('info')}</span>`:''}</div>
+   ${tot?`<div class="pp-rec"><div class="pp-rec-h"><span>Avaliações recentes</span><button class="rate" data-pptab="aval">${ic('star','fill')} ${rateTxt(p)} <span>(${tot})</span></button></div>
+     <div class="pp-hs">${revs.map(r=>`<button class="pp-mini" data-pptab="aval"><b>${ic('star','fill')}${r.nota.toFixed(1).replace('.',',')} <small>${ago(r.at)}</small></b><span>${esc((r.texto||NOTA_L[r.nota]||'').slice(0,40))}</span></button>`).join('')}</div></div>`:''}
+   ${p.ig?`<a class="pp-news" href="https://instagram.com/${esc(p.ig)}" target="_blank" rel="noopener noreferrer">${ic('ig')}Novidades no Instagram</a>`:''}
+   <div class="pp-info">
+    <button class="pp-box pp-fold" data-fold aria-expanded="false"><span class="h">${ic('tag')}Valores${ic('chevd')}</span><small>a partir de</small><b class="pr">${svc?brl0(svc.p):'—'} ${svc?`<em>(${durTxt(svc.d)})</em>`:''}</b>
+     <span class="more">${p.services.map(s=>`<span class="ln"><span>${esc(s.n.replace('Extensão de cílios – ',''))}</span><b>${brl0(s.p)}</b></span>`).join('')}</span>
+     ${p.pagto&&p.pagto.length?`<span class="sm">Pagamento: ${esc(p.pagto.join(', '))}</span>`:''}</button>
+    <button class="pp-box pp-fold" data-fold aria-expanded="false"><span class="h">${ic('pin')}Localização${ic('chevd')}</span><b>${esc(p.hood||p.city)}</b><span class="sm">${esc(p.hood?p.city:'')}</span><span class="sm">${esc(at)}</span>
+     <span class="more"><span class="sm">${esc(loc)}</span>${p.atend!=='estudio'?`<span class="sm">Atende até ${p.raio} km de distância</span>`:''}</span></button></div>
+   ${main}
+   <div class="row-actions pp-act">${p.own?'':`<button class="btn ghost" data-msg="${p.acc}">${ic('chat')}Mensagem</button>`}${p.wa&&p.agenda?ext('https://wa.me/'+p.wa,ic('chat')+'WhatsApp'):''}${favBtn(p.id)}</div>
    <div class="tabs pp-tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" aria-selected="${PP.tab===k}" data-pptab="${k}">${l}${k==='aval'&&tot?`<small>(${tot})</small>`:''}</button>`).join('')}</div>
    ${body}</main>
    <div class="pp-bar"><div><small>a partir de</small><b>${svc?brl0(svc.p):'—'}</b>${svc?`<small>(${durTxt(svc.d)})</small>`:''}</div>${p.own?`<button class="btn" data-go="meu-perfil">Gerenciar perfil</button>`:`<button class="btn" data-xbook="${p.id}">Solicitar horário</button>`}</div>`;
 }
+document.addEventListener('click',e=>{
+  const t=e.target,f=t.closest('[data-fold]');
+  if(f){const o=f.getAttribute('aria-expanded')!=='true';f.setAttribute('aria-expanded',o);return}
+  if(t.closest('[data-share]')){
+    const u=location.href,n=(CACHE.get(PP.id)||{}).name||'Beauty Hub';
+    if(navigator.share){navigator.share({title:n+' | Beauty Hub',url:u}).catch(()=>{})}
+    else if(navigator.clipboard){navigator.clipboard.writeText(u).then(()=>toast('Link copiado'),()=>toast(u))}
+    else toast(u);
+  }
+});
 
 /* ----- publicações (no Meu perfil) ----- */
 function resizeImg(file,max){return new Promise((res,rej)=>{

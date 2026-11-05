@@ -120,13 +120,7 @@ function card(it){
    <ul class="meta">${metaOf(it).map(([i,t])=>`<li>${ic(i)}<span>${esc(t)}</span></li>`).join('')}</ul>
    <div class="card-f">${rate}<span class="more">Ver detalhes ${ic('arrow')}</span></div></article>`;
 }
-function proCard(p){
-  const f=S.follows.includes(p.id);
-  return `<article class="card" data-xpro="${p.id}">
-   <div class="mini">${avatarHTML(p.photo,p.name,'lg')}<div class="grow"><h3 style="padding:0;font-size:28px"><button data-xpro="${p.id}">${esc(p.name)}</button></h3><small>${esc(p.role)}${p.verified?` · <span class="verified">${ic('shield')}Verificada</span>`:''}</small></div></div>
-   <ul class="meta"><li>${ic('pin')}<span>${esc(p.city)}</span></li></ul>
-   <div class="card-f">${p.rating?`<span class="rate">${ic('star','fill')} ${rateTxt(p)} <span>(${p.reviews})</span></span>`:'<span class="novo">Novo</span>'}<button class="btn sm" data-follow="${p.id}" aria-pressed="${f}">${f?'Seguindo':'Seguir'}</button></div></article>`;
-}
+function proCard(p){return proCardApp(p)}
 /* Detalhe decorativo: uma linha de cílios, bem discreta. */
 function lashArc(){
   let l='',lid='';

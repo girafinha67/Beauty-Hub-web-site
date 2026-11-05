@@ -1,6 +1,6 @@
 'use strict';
 const fs = require('node:fs'), os = require('node:os'), path = require('node:path');
-process.env.DB_FILE = ':memory:';
+process.env.DB_FILE = ':memory:'; process.env.VERIFY_ONLINE = '0';
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'bh-'));
 module.exports.boot = async () => {
   const { start } = require('../server');

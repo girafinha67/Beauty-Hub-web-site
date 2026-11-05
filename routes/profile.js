@@ -22,7 +22,7 @@ const addrOf = o => ({ rua: V.str(o.rua, 120), num: V.str(o.num, 20), bairro: V.
 
 R.get('/api/me/setup', { auth: true }, ctx => setupJson(ctx.account));
 
-R.put('/api/me/setup', { auth: true }, ctx => {
+R.put('/api/me/setup', { auth: true }, async ctx => {
   const acc = ctx.account, b = ctx.body, pro = D.isProAcc(acc), E = {};
   addrCheck(b, '', E);
   const w = b.w && typeof b.w === 'object' ? b.w : {};
@@ -31,6 +31,8 @@ R.put('/api/me/setup', { auth: true }, ctx => {
     if (V.str(b.nomeProf, 80).length < 2) E.nomeProf = 'Informe o nome que será exibido.';
     if (!V.str(b.spec, 60)) E.spec = 'Escolha sua especialidade.';
     if (!(V.cpfOk(b.doc) || V.cnpjOk(b.doc))) E.doc = 'CPF ou CNPJ inválido. Confira os números.';
+    else if (V.digits(b.doc).length === 14 && V.digits(b.doc) !== V.digits(acc.doc)) E.doc = (await require('../lib/verify').cnpjReceita(b.doc)).msg || undefined;
+    if (!E.doc) delete E.doc;
     atend = ATEND.includes(b.atend) ? b.atend : 'estudio';
     if (atend !== 'domicilio' && !b.mesmo) addrCheck(w, 'w.', E);
     const list = Array.isArray(b.services) ? b.services.slice(0, 40) : [];

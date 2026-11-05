@@ -204,13 +204,29 @@ async function loadPros(){
  if(seq===loadSeq)PROS_LIST=remember(r.items);
 }
 const homeList=()=>PROS_LIST;
+const backTxt=m=>m==null?'':m<60?`Volto em ${Math.max(1,m)} min`:m<2880?`Volto em ${Math.round(m/60)} ${Math.round(m/60)===1?'hora':'horas'}`:`Volto em ${Math.round(m/1440)} dias`;
+const atendTxt=a=>a==='domicilio'?'A domicílio':a==='ambos'?'Local e domicílio':'Com local';
+const tagline=p=>{const t=String(p.bio||'').replace(/\s+/g,' ').trim();return t||p.role};
+/* Card da profissional: foto grande à esquerda, situação do expediente, preço, avaliações, atendimento, fotos e local. */
 function proCardApp(p){
- const f=S.favs.includes(p.id),top=p.services.slice(0,2).map(s=>s.n.replace('Extensão de cílios – ','')),mp=minPrice(p);
- return `<article class="pc" data-xpro="${p.id}" tabindex="0" role="button" aria-label="Ver ${esc(p.name)}">
-  ${p.cover?`<img class="pc-cv" src="${esc(p.cover)}" alt="" loading="lazy">`:avatarHTML(p.photo,p.name)}<div class="pc-b"><h3>${esc(p.name)}${p.own?' <em>você</em>':''}</h3><small>${esc(p.role)}${p.verified?` · <span class="verified">${ic('shield')}Verificada</span>`:''}</small>
-  <div class="pc-m">${p.rating?`<span class="rate">${ic('star','fill')} ${rateTxt(p)} <span>(${p.reviews})</span></span>`:'<span class="novo">Novo</span>'}<span>${ic('pin')}${esc(p.city)}</span></div>
-  <div class="pc-t">${top.map(t=>`<span>${esc(t)}</span>`).join('')}</div></div>
-  <div class="pc-r"><button class="pc-fav ${f?'on':''}" data-fav="${p.id}" aria-pressed="${f}" aria-label="${f?'Remover dos favoritos':'Salvar nos favoritos'}">${ic('heart')}</button>${mp<1e9?`<small>a partir de</small><b>${brl0(mp)}</b>`:''}</div></article>`;
+ const f=S.favs.includes(p.id),mp=minPrice(p),cheap=p.services.slice().sort((a,b)=>a.p-b.p)[0],h=p.hours||{open:false,back:null};
+ const pill=h.open?`<span class="pk-pill on">${ic('clock')}Atende até ${esc(h.until)}</span>`:(h.back==null?'':`<span class="pk-pill">${ic('clock')}${backTxt(h.back)}</span>`);
+ const pic=p.photo||p.cover;
+ return `<article class="pk" data-xpro="${p.id}" tabindex="0" role="button" aria-label="Ver ${esc(p.name)}">
+  <div class="pk-ph">${pic?`<img src="${esc(pic)}" alt="" loading="lazy">`:`<span class="ini">${esc(initials(p.name))}</span>`}
+   <button class="pc-fav ${f?'on':''}" data-fav="${p.id}" aria-pressed="${f}" aria-label="${f?'Remover dos favoritos':'Salvar nos favoritos'}">${ic('heart')}</button></div>
+  <div class="pk-b">
+   <span class="pk-st ${h.open?'on':''}"><i></i>${h.open?'Atendendo agora':'Fora do expediente'}</span>
+   ${pill}
+   <p class="pk-tag">${esc(tagline(p))}</p>
+   <h3>${esc(p.name)}${p.own?' <em>você</em>':''}${p.verified?`<span class="pk-ok" title="Perfil verificado">${ic('shield')}</span>`:''}</h3>
+   ${mp<1e9?`<span class="pk-from">A partir de</span><button class="pk-price" data-xsvc aria-expanded="false" aria-label="Ver valores dos serviços">${brl0(mp)}${ic('chevd')}</button><span class="pk-dur">${durTxt(cheap.d)}</span>
+   <ul class="pk-svc">${p.services.map(s=>`<li><span>${esc(s.n.replace('Extensão de cílios – ',''))}</span><b>${brl0(s.p)}</b></li>`).join('')}</ul>`:''}
+   <span class="pk-rev">${ic('star','fill')}${p.rating?`<b>${rateTxt(p)}</b> <small>(${p.reviews})</small>`:''}<u data-xrev="${p.id}">Ver avaliações</u></span>
+   <div class="pk-i"><span>${ic('idcard')}${p.anos?esc(p.anos):'Novo no app'}</span><span>${ic('home')}${atendTxt(p.atend)}</span></div>
+   <div class="pk-i"><span>${ic('imgs')}${p.photos?p.photos+(p.photos===1?' foto':' fotos'):'Sem fotos'}</span></div>
+   <div class="pk-i pk-loc"><span>${ic('pin')}${esc(p.hood?p.hood+' · '+p.city:p.city)}</span></div>
+  </div></article>`;
 }
 function homeListHTML(){
  const L=homeList(),show=(H.all||DESK())?L:L.slice(0,4);
@@ -400,6 +416,8 @@ function perfilPage(){
 document.addEventListener('click',e=>{
  const t=e.target;let el;
  if(t.closest('[data-fav]'))return;
+ if(el=t.closest('[data-xsvc]')){const c=el.closest('.pk'),o=!c.classList.contains('open');c.classList.toggle('open',o);el.setAttribute('aria-expanded',o);return}
+ if(el=t.closest('[data-xrev]')){PP.tab='aval';PP.keep=1;closeSheet();go('profissional/'+el.dataset.xrev);return}
  if(t.closest('[data-xback]')){if(needSetup()){logout();toast('Você saiu da conta')}else go('perfil');return}
  if(t.closest('[data-xnotif]')){openNotifs();return}
  if(t.closest('[data-xmore]')){openMore();return}
@@ -447,4 +465,4 @@ document.addEventListener('change',e=>{
  if(d.xsvc){const [i,f]=d.xsvc.split(':');P.services[+i][f]=t.value;return}
  if(d.px==='mesmo'){P.mesmo=t.checked;setupPage(true)}
 });
-document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('.pc[data-xpro]')){e.preventDefault();PP.tab='pubs';go('profissional/'+e.target.dataset.xpro)}});
+document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('.pc[data-xpro],.pk[data-xpro]')){e.preventDefault();PP.tab='pubs';go('profissional/'+e.target.dataset.xpro)}});

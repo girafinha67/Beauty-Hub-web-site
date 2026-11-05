@@ -1,0 +1,36 @@
+/* ===== Recursos ligados ao servidor: mensagens, galeria, avaliação, notificações ===== */
+.ib,.tabbar button{position:relative}
+.tabbar .cnt{top:2px;right:calc(50% - 26px);left:auto}
+.cnt.inl{position:static}
+.row-card.conv{width:100%;border:1px solid var(--line);background:var(--surface);font:inherit;color:inherit;cursor:pointer;text-align:left}
+.nrow{width:100%;border:1px solid var(--line);background:var(--surface);font:inherit;color:inherit}
+.nrow.new{border-color:var(--rose);background:var(--soft)}
+.thread{display:flex;flex-direction:column;gap:12px;margin-top:20px}
+.th-h{display:flex;align-items:center;gap:12px}
+.th-h b{font-weight:500}
+.bubs{display:flex;flex-direction:column;gap:8px;max-height:min(58vh,520px);min-height:220px;overflow-y:auto;padding:14px;background:var(--surface);border:1px solid var(--line);border-radius:20px}
+.bub{max-width:80%;align-self:flex-start;background:var(--surface2);border-radius:18px 18px 18px 6px;padding:9px 13px}
+.bub.me{align-self:flex-end;background:var(--wine);color:var(--on-wine);border-radius:18px 18px 6px 18px}
+.bub p{margin:0;overflow-wrap:anywhere}
+.bub small{display:block;font-size:11px;opacity:.65;margin-top:2px;text-align:right}
+.th-f{display:flex;gap:8px;align-items:flex-end}
+.th-f textarea{flex:1;resize:none;font:inherit;border:1px solid var(--line);border-radius:18px;padding:11px 14px;background:var(--surface);color:var(--ink);min-height:46px;max-height:120px}
+.gal{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.gal>div,.gal-add{position:relative;aspect-ratio:1;border-radius:14px;overflow:hidden;background:var(--surface2)}
+.gal img{width:100%;height:100%;object-fit:cover;display:block}
+.gal.ro{grid-template-columns:repeat(4,1fr)}
+.gal-add{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:1.5px dashed var(--rose);color:var(--muted);font-size:12px;cursor:pointer}
+.gal-add svg{width:22px;height:22px}
+.gdel{position:absolute;top:6px;right:6px;width:30px;height:30px;border-radius:50%;border:0;background:rgba(43,10,24,.72);color:#fff;display:grid;place-items:center;cursor:pointer}
+.gdel svg{width:15px;height:15px}
+.stars{display:flex;gap:6px;justify-content:center;margin:8px 0}
+.stars button{background:none;border:0;padding:4px;color:var(--line);cursor:pointer}
+.stars button svg{width:34px;height:34px}
+.stars button.on{color:#C9922E}
+.stars button.on svg{fill:currentColor}
+.st-solicitado{color:var(--warn)}.st-confirmado,.st-concluido{color:var(--ok)}.st-recusado,.st-cancelado{color:var(--bad)}
+.pc-t span[class^="st-"]{background:none;font-weight:500}
+.locked{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:13px;margin:6px 0}
+.locked svg{width:15px;height:15px;flex:none}
+.xrow{display:flex;gap:10px}
+.linkbtn{background:none;border:0;padding:0;color:var(--wine);text-decoration:underline;font:inherit;cursor:pointer}

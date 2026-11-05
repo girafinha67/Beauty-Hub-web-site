@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: beautyhub
+    runtime: docker
+    healthCheckPath: /api/health
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATA_DIR
+        value: /data
+      - key: TRUST_PROXY
+        value: "1"
+      - key: BASE_URL
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: MP_ACCESS_TOKEN
+        sync: false
+      - key: CONTACT_EMAIL
+        sync: false

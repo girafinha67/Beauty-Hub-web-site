@@ -1,6 +1,6 @@
 {
   "name": "beautyhub",
-  "version": "1.2.0",
+  "version": "1.4.0",
   "description": "Beauty Hub: site + API (Node.js sem dependências, banco SQLite)",
   "private": true,
   "main": "server.js",

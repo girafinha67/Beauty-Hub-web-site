@@ -952,23 +952,22 @@ const atendTxt=a=>a==='domicilio'?'A domicílio':a==='ambos'?'Local e domicílio
 const tagline=p=>{const t=String(p.bio||'').replace(/\s+/g,' ').trim();return t||p.role};
 /* Card da profissional: foto grande à esquerda, situação do expediente, preço, avaliações, atendimento, fotos e local. */
 function proCardApp(p){
- const f=S.favs.includes(p.id),mp=minPrice(p),cheap=p.services.slice().sort((a,b)=>a.p-b.p)[0],h=p.hours||{open:false,back:null};
+ const sv=p.services.slice().sort((a,b)=>a.p-b.p||a.d-b.d),cheap=sv[0],h=p.hours||{open:false,back:null};
  const pill=h.open?`<span class="pk-pill on">${ic('clock')}Atende até ${esc(h.until)}</span>`:(h.back==null?'':`<span class="pk-pill">${ic('clock')}${backTxt(h.back)}</span>`);
- const pic=p.photo||p.cover;
+ const pic=p.photo||p.cover,loc=p.hood?p.hood+', '+p.city:p.city;
  return `<article class="pk" data-xpro="${p.id}" tabindex="0" role="button" aria-label="Ver ${esc(p.name)}">
-  <div class="pk-ph">${pic?`<img src="${esc(pic)}" alt="" loading="lazy">`:`<span class="ini">${esc(initials(p.name))}</span>`}
-   <button class="pc-fav ${f?'on':''}" data-fav="${p.id}" aria-pressed="${f}" aria-label="${f?'Remover dos favoritos':'Salvar nos favoritos'}">${ic('heart')}</button></div>
+  <div class="pk-ph">${pic?`<img src="${esc(pic)}" alt="" loading="lazy">`:`<span class="ini">${esc(initials(p.name))}</span>`}</div>
   <div class="pk-b">
    <span class="pk-st ${h.open?'on':''}"><i></i>${h.open?'Atendendo agora':'Fora do expediente'}</span>
    ${pill}
    <p class="pk-tag">${esc(tagline(p))}</p>
    <h3>${esc(p.name)}${p.own?' <em>você</em>':''}${p.verified?`<span class="pk-ok" title="Perfil verificado">${ic('shield')}</span>`:''}</h3>
-   ${mp<1e9?`<span class="pk-from">A partir de</span><button class="pk-price" data-xsvc aria-expanded="false" aria-label="Ver valores dos serviços">${brl0(mp)}${ic('chevd')}</button><span class="pk-dur">${durTxt(cheap.d)}</span>
-   <ul class="pk-svc">${p.services.map(s=>`<li><span>${esc(s.n.replace('Extensão de cílios – ',''))}</span><b>${brl0(s.p)}</b></li>`).join('')}</ul>`:''}
-   <span class="pk-rev">${ic('star','fill')}${p.rating?`<b>${rateTxt(p)}</b> <small>(${p.reviews})</small>`:''}<u data-xrev="${p.id}">Ver avaliações</u></span>
-   <div class="pk-i"><span>${ic('idcard')}${p.anos?esc(p.anos):'Novo no app'}</span><span>${ic('home')}${atendTxt(p.atend)}</span></div>
-   <div class="pk-i"><span>${ic('imgs')}${p.photos?p.photos+(p.photos===1?' foto':' fotos'):'Sem fotos'}</span></div>
-   <div class="pk-i pk-loc"><span>${ic('pin')}${esc(p.hood?p.hood+' · '+p.city:p.city)}</span></div>
+   ${cheap?`<span class="pk-from">A partir de</span><button class="pk-price" data-xsvc aria-expanded="false" aria-label="Ver valores, do menor ao maior">${brl0(cheap.p)}${ic('chevd')}</button><span class="pk-dur">${durTxt(cheap.d)}</span>
+   <ul class="pk-svc">${sv.map(s=>`<li><span>${esc(s.n.replace('Extensão de cílios – ',''))}<small>${durTxt(s.d)}</small></span><b>${brl0(s.p)}</b></li>`).join('')}</ul>`:''}
+   <span class="pk-rev">${ic('star','fill')}<u data-xrev="${p.id}">Ver avaliações</u></span>
+   <div class="pk-i"><span>${ic('idcard')}${p.anos?esc(p.anos):'Novo'}</span><span>${ic('home')}${atendTxt(p.atend)}</span></div>
+   <div class="pk-i one"><span>${ic('imgs')}${p.photos?p.photos+(p.photos===1?' foto':' fotos'):'Sem fotos ou vídeos'}</span></div>
+   <div class="pk-i one loc"><span>${ic('pin')}<em>${esc(loc)}</em></span></div>
   </div></article>`;
 }
 function homeListHTML(){

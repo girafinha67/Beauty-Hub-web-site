@@ -114,7 +114,7 @@ try:
         A.goto(base + '/#agendamentos'); A.reload(); A.click('[data-aact$=":concluido"]'); A.wait_for_selector('.pc.ag:has-text("Concluído")')
         B.goto(base + '/#agendamentos'); B.reload(); B.click('[data-review]'); B.click('[data-star="5"]'); B.fill('#rv-t', 'Amei o resultado!'); B.click('[data-sendreview]')
         B.wait_for_selector('#toast .toast:has-text("Avalia")')
-        B.goto(base + '/#home'); B.reload(); B.wait_for_selector('.pk:has-text("Helena Lash") .pk-rev b')
+        B.goto(base + '/#home'); B.reload(); B.wait_for_selector('.pk:has-text("Helena Lash") .pk-rev u')
 
         step('network: pergunta publicada e visível')
         B.goto(base + '/#network'); B.reload(); B.click('[data-newthread]'); B.fill('#nt-q', 'Qual cola vocês recomendam para volume?'); B.click('#thread-form button')

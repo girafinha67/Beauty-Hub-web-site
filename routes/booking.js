@@ -4,10 +4,10 @@ const V = require('../lib/validate');
 const D = require('../lib/domain');
 
 const STEP = 30;
-function slotsFor(pro, dur, date) {
+async function slotsFor(pro, dur, date) {
   if (!pro.dias.includes(D.weekday(date))) return [];
   const open = D.toMin(pro.abre), close = D.toMin(pro.fecha);
-  const busy = D.all(`SELECT time, duration FROM appointments WHERE pro_id=? AND date=? AND status IN ('solicitado','confirmado')`, pro.acc, date)
+  const busy = (await D.all(`SELECT time, duration FROM appointments WHERE pro_id=? AND date=? AND status IN ('solicitado','confirmado')`, pro.acc, date))
     .map(b => [D.toMin(b.time), D.toMin(b.time) + b.duration]);
   const nl = D.nowLocal(), out = [];
   for (let t = open; t + dur <= close; t += STEP) {
@@ -24,35 +24,35 @@ function checkDate(date) {
   const max = new Date(Date.parse(nl.date + 'T00:00:00Z') + 180 * 864e5).toISOString().slice(0, 10);
   if (date > max) throw new HttpError(400, 'Só é possível agendar com até 6 meses de antecedência.');
 }
-function getPro(idStr, viewer) {
+async function getPro(idStr, viewer) {
   const m = String(idStr).match(/^p(\d+)$/);
-  const p = m && D.loadPros({ viewerId: viewer, id: +m[1] })[0];
+  const p = m && (await D.loadPros({ viewerId: viewer, id: +m[1] }))[0];
   if (!p) throw new HttpError(404, 'Profissional não encontrada.');
   return p;
 }
 
-R.get('/api/pros/:id/slots', { auth: true }, ctx => {
-  const pro = getPro(ctx.params.id, ctx.account.id);
+R.get('/api/pros/:id/slots', { auth: true }, async ctx => {
+  const pro = await getPro(ctx.params.id, ctx.account.id);
   const svc = pro.services.find(s => s.id === +ctx.query.svc);
   if (!svc) throw new HttpError(400, 'Escolha um serviço.');
   checkDate(ctx.query.date);
-  return { slots: slotsFor(pro, svc.d, ctx.query.date) };
+  return { slots: await slotsFor(pro, svc.d, ctx.query.date) };
 });
 
-R.post('/api/appointments', { auth: true }, ctx => {
+R.post('/api/appointments', { auth: true }, async ctx => {
   const me = ctx.account, b = ctx.body;
-  const pro = getPro(b.pro, me.id);
+  const pro = await getPro(b.pro, me.id);
   if (pro.acc === me.id) throw new HttpError(400, 'Você não pode agendar com o seu próprio perfil.');
   const svc = pro.services.find(s => s.id === +b.svc);
   if (!svc) throw new HttpError(400, 'Escolha um serviço.');
   checkDate(b.date);
-  if (!V.isTime(b.time) || !slotsFor(pro, svc.d, b.date).includes(b.time)) throw new HttpError(409, 'Esse horário não está mais disponível. Escolha outro.');
-  const open = D.one(`SELECT COUNT(*) n FROM appointments WHERE client_id=? AND status='solicitado'`, me.id).n;
+  if (!V.isTime(b.time) || !(await slotsFor(pro, svc.d, b.date)).includes(b.time)) throw new HttpError(409, 'Esse horário não está mais disponível. Escolha outro.');
+  const open = (await D.one(`SELECT COUNT(*) n FROM appointments WHERE client_id=? AND status='solicitado'`, me.id)).n;
   if (open >= 10) throw new HttpError(429, 'Você tem muitas solicitações em aberto. Aguarde as respostas.');
   const now = D.now();
-  const r = D.run('INSERT INTO appointments(client_id,pro_id,service,price,duration,date,time,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)',
+  const r = await D.run('INSERT INTO appointments(client_id,pro_id,service,price,duration,date,time,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)',
     me.id, pro.acc, svc.n, svc.p, svc.d, b.date, b.time, 'solicitado', now, now);
-  D.notify(pro.acc, 'agenda', `${me.nome.split(' ')[0]} solicitou ${svc.n} em ${b.date.split('-').reverse().join('/')} às ${b.time}.`, 'agendamentos');
+  await D.notify(pro.acc, 'agenda', `${me.nome.split(' ')[0]} solicitou ${svc.n} em ${b.date.split('-').reverse().join('/')} às ${b.time}.`, 'agendamentos');
   return { id: Number(r.lastInsertRowid) };
 });
 
@@ -66,9 +66,9 @@ function apptJson(a, me, plans) {
     reviewed: !!a.review_id, canReview: !!canReview
   };
 }
-R.get('/api/appointments', { auth: true }, ctx => {
-  const me = ctx.account.id, plans = D.plansMap();
-  const rows = D.all(`SELECT a.*, COALESCE(NULLIF(s.nome_prof,''), p.nome) pro_name, c.nome client_name, c.tel client_tel, r.id review_id,
+R.get('/api/appointments', { auth: true }, async ctx => {
+  const me = ctx.account.id, plans = await D.plansMap();
+  const rows = await D.all(`SELECT a.*, COALESCE(NULLIF(s.nome_prof,''), p.nome) pro_name, c.nome client_name, c.tel client_tel, r.id review_id,
       reg.status rstatus, reg.plan, reg.pay_status, reg.paid_until
     FROM appointments a JOIN accounts p ON p.id=a.pro_id JOIN accounts c ON c.id=a.client_id
     LEFT JOIN setups s ON s.account_id=a.pro_id LEFT JOIN reviews r ON r.appointment_id=a.id
@@ -79,8 +79,8 @@ R.get('/api/appointments', { auth: true }, ctx => {
 });
 
 const TEXT = { confirmado: 'confirmou', recusado: 'recusou', cancelado: 'cancelou', concluido: 'concluiu' };
-R.patch('/api/appointments/:id', { auth: true }, ctx => {
-  const me = ctx.account, a = D.one('SELECT * FROM appointments WHERE id=?', +ctx.params.id);
+R.patch('/api/appointments/:id', { auth: true }, async ctx => {
+  const me = ctx.account, a = await D.one('SELECT * FROM appointments WHERE id=?', +ctx.params.id);
   if (!a || (a.client_id !== me.id && a.pro_id !== me.id)) throw new HttpError(404, 'Agendamento não encontrado.');
   const to = ctx.body.status, isPro = a.pro_id === me.id;
   const allowed = isPro
@@ -88,22 +88,22 @@ R.patch('/api/appointments/:id', { auth: true }, ctx => {
     : { solicitado: ['cancelado'], confirmado: ['cancelado'] };
   if (!(allowed[a.status] || []).includes(to)) throw new HttpError(409, 'Essa ação não está disponível para este agendamento.');
   if (to === 'concluido' && a.date > D.nowLocal().date) throw new HttpError(409, 'Só dá para concluir no dia do atendimento ou depois.');
-  D.run('UPDATE appointments SET status=?, updated_at=? WHERE id=?', to, D.now(), a.id);
-  const who = D.one(`SELECT COALESCE(NULLIF(s.nome_prof,''), x.nome) n FROM accounts x LEFT JOIN setups s ON s.account_id=x.id WHERE x.id=?`, me.id).n;
-  D.notify(isPro ? a.client_id : a.pro_id, 'agenda', `${who} ${TEXT[to]} o agendamento de ${a.service} (${a.date.split('-').reverse().join('/')} às ${a.time}).`, 'agendamentos');
+  await D.run('UPDATE appointments SET status=?, updated_at=? WHERE id=?', to, D.now(), a.id);
+  const who = (await D.one(`SELECT COALESCE(NULLIF(s.nome_prof,''), x.nome) n FROM accounts x LEFT JOIN setups s ON s.account_id=x.id WHERE x.id=?`, me.id)).n;
+  await D.notify(isPro ? a.client_id : a.pro_id, 'agenda', `${who} ${TEXT[to]} o agendamento de ${a.service} (${a.date.split('-').reverse().join('/')} às ${a.time}).`, 'agendamentos');
   return { ok: true, status: to };
 });
 
-R.post('/api/appointments/:id/review', { auth: true }, ctx => {
-  const me = ctx.account, a = D.one('SELECT * FROM appointments WHERE id=?', +ctx.params.id);
+R.post('/api/appointments/:id/review', { auth: true }, async ctx => {
+  const me = ctx.account, a = await D.one('SELECT * FROM appointments WHERE id=?', +ctx.params.id);
   if (!a || a.client_id !== me.id) throw new HttpError(404, 'Agendamento não encontrado.');
   if (a.status !== 'concluido') throw new HttpError(409, 'Você só pode avaliar depois que o atendimento for concluído.');
-  if (D.one('SELECT 1 FROM reviews WHERE appointment_id=?', a.id)) throw new HttpError(409, 'Você já avaliou este atendimento.');
-  const pro = D.loadPros({ id: a.pro_id })[0];
+  if (await D.one('SELECT 1 FROM reviews WHERE appointment_id=?', a.id)) throw new HttpError(409, 'Você já avaliou este atendimento.');
+  const pro = (await D.loadPros({ id: a.pro_id }))[0];
   if (!pro || !pro.canReview) throw new HttpError(409, 'Esta profissional não recebe avaliações no momento.');
   const nota = +ctx.body.nota, texto = V.str(ctx.body.texto, 600);
   if (!Number.isInteger(nota) || nota < 1 || nota > 5) throw new HttpError(422, 'Escolha uma nota de 1 a 5.', { nota: 'Escolha uma nota de 1 a 5.' });
-  D.run('INSERT INTO reviews(appointment_id,pro_id,author_id,nota,texto,status,created_at) VALUES(?,?,?,?,?,?,?)', a.id, a.pro_id, me.id, nota, texto, 'aprovada', D.now());
-  D.notify(a.pro_id, 'review', `${me.nome.split(' ')[0]} avaliou seu atendimento com ${nota} ${nota === 1 ? 'estrela' : 'estrelas'}.`, 'perfil');
+  await D.run('INSERT INTO reviews(appointment_id,pro_id,author_id,nota,texto,status,created_at) VALUES(?,?,?,?,?,?,?)', a.id, a.pro_id, me.id, nota, texto, 'aprovada', D.now());
+  await D.notify(a.pro_id, 'review', `${me.nome.split(' ')[0]} avaliou seu atendimento com ${nota} ${nota === 1 ? 'estrela' : 'estrelas'}.`, 'perfil');
   return { ok: true };
 });

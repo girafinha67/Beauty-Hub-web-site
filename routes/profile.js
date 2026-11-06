@@ -20,9 +20,9 @@ function addrCheck(o, pre, E) {
 }
 const addrOf = o => ({ rua: V.str(o.rua, 120), num: V.str(o.num, 20), bairro: V.str(o.bairro, 80), cidade: V.str(o.cidade, 80), uf: o.uf || '', cep: V.str(o.cep, 9) });
 
-R.get('/api/me/setup', { auth: true }, ctx => setupJson(ctx.account));
+R.get('/api/me/setup', { auth: true }, async ctx => await setupJson(ctx.account));
 
-R.put('/api/me/setup', { auth: true }, ctx => {
+R.put('/api/me/setup', { auth: true }, async ctx => {
   const acc = ctx.account, b = ctx.body, pro = D.isProAcc(acc), E = {};
   addrCheck(b, '', E);
   const w = b.w && typeof b.w === 'object' ? b.w : {};
@@ -62,101 +62,101 @@ R.put('/api/me/setup', { auth: true }, ctx => {
 
   const a = addrOf(b), wk = addrOf(w), pref = (Array.isArray(b.pref) ? b.pref : []).map(x => V.str(x, 40)).filter(Boolean).slice(0, 12);
   const lat = Number.isFinite(+b.lat) && b.lat !== null ? +b.lat : null, lng = Number.isFinite(+b.lng) && b.lng !== null ? +b.lng : null;
-  D.tx(() => {
-    D.run('INSERT INTO setups(account_id) VALUES(?) ON CONFLICT(account_id) DO NOTHING', acc.id);
-    D.run(`UPDATE setups SET done=1, rua=?, num=?, bairro=?, cidade=?, uf=?, cep=?, lat=?, lng=?, pref=?,
+  await D.tx(async () => {
+    await D.run('INSERT INTO setups(account_id) VALUES(?) ON CONFLICT(account_id) DO NOTHING', acc.id);
+    await D.run(`UPDATE setups SET done=1, rua=?, num=?, bairro=?, cidade=?, uf=?, cep=?, lat=?, lng=?, pref=?,
       nome_prof=?, spec=?, anos=?, bio=?, atend=?, mesmo=?, w=?, raio=?, dias=?, abre=?, fecha=?, pagto=?, wa=?, ig=?, agenda=?, updated_at=? WHERE account_id=?`,
       a.rua, a.num, a.bairro, a.cidade, a.uf, a.cep, lat, lng, JSON.stringify(pref),
       pro ? V.str(b.nomeProf, 80) : '', pro ? V.str(b.spec, 60) : '', pro ? V.str(b.anos, 40) : '', pro ? V.str(b.bio, 500) : '',
       atend, b.mesmo === false ? 0 : 1, JSON.stringify(wk), raio, JSON.stringify(dias), abre, fecha, JSON.stringify(pagto), wa, ig, agenda, D.now(), acc.id);
-    D.run('DELETE FROM services WHERE account_id=?', acc.id);
+    await D.run('DELETE FROM services WHERE account_id=?', acc.id);
     if (pro) {
-      services.forEach((s, i) => D.run('INSERT INTO services(account_id,nome,preco,duracao,pos) VALUES(?,?,?,?,?)', acc.id, s.n, s.p, s.d, i));
-      D.run('UPDATE accounts SET doc=? WHERE id=?', V.digits(b.doc), acc.id);
+      for (const [i, s] of services.entries()) await D.run('INSERT INTO services(account_id,nome,preco,duracao,pos) VALUES(?,?,?,?,?)', acc.id, s.n, s.p, s.d, i);
+      await D.run('UPDATE accounts SET doc=? WHERE id=?', V.digits(b.doc), acc.id);
     }
   });
-  return setupJson(D.one('SELECT * FROM accounts WHERE id=?', acc.id));
+  return await setupJson(await D.one('SELECT * FROM accounts WHERE id=?', acc.id));
 });
 
-R.put('/api/me/contacts', { auth: true }, ctx => {
+R.put('/api/me/contacts', { auth: true }, async ctx => {
   const acc = ctx.account, b = ctx.body, E = {};
-  const s = D.one('SELECT * FROM setups WHERE account_id=?', acc.id);
+  const s = await D.one('SELECT * FROM setups WHERE account_id=?', acc.id);
   if (!s || !s.done) throw new HttpError(409, 'Complete seu cadastro antes de editar os contatos.');
   const wa = V.digits(b.wa), ig = V.str(b.ig, 31).replace(/^@/, ''), agenda = V.str(b.agenda, 300);
   if (D.isProAcc(acc) && (wa.length < 10 || wa.length > 11)) E.wa = 'Informe o WhatsApp com DDD.';
   if (!D.isProAcc(acc) && wa && (wa.length < 10 || wa.length > 11)) E.wa = 'Informe o WhatsApp com DDD.';
   if (ig && !/^[A-Za-z0-9._]{1,30}$/.test(ig)) E.ig = 'Use só letras, números, ponto e sublinhado.';
   if (agenda) {
-    const perms = D.permsOf(D.one('SELECT * FROM registrations WHERE account_id=?', acc.id), D.plansMap());
+    const perms = D.permsOf(await D.one('SELECT * FROM registrations WHERE account_id=?', acc.id), await D.plansMap());
     if (!perms.agendamento) E.agenda = 'O link de agendamento faz parte de planos com agendamento ativo.';
     else if (!/^https:\/\/[^\s]+$/.test(agenda)) E.agenda = 'Use um endereço começando com https://';
   }
   if (Object.keys(E).length) throw new HttpError(422, 'Confira os campos.', E);
-  D.run('UPDATE setups SET wa=?, ig=?, agenda=? WHERE account_id=?', wa, ig, agenda, acc.id);
-  return setupJson(acc);
+  await D.run('UPDATE setups SET wa=?, ig=?, agenda=? WHERE account_id=?', wa, ig, agenda, acc.id);
+  return await setupJson(acc);
 });
 
 /* ---------- fotos ---------- */
-R.post('/api/me/photo', { auth: true, raw: true }, ctx => {
-  const url = D.saveImage(ctx.body);
-  D.run('INSERT INTO setups(account_id) VALUES(?) ON CONFLICT(account_id) DO NOTHING', ctx.account.id);
-  const old = D.one('SELECT photo FROM setups WHERE account_id=?', ctx.account.id).photo;
-  D.run('UPDATE setups SET photo=? WHERE account_id=?', url, ctx.account.id);
-  D.removeImage(old);
+R.post('/api/me/photo', { auth: true, raw: true }, async ctx => {
+  const url = await D.saveImage(ctx.body);
+  await D.run('INSERT INTO setups(account_id) VALUES(?) ON CONFLICT(account_id) DO NOTHING', ctx.account.id);
+  const old = (await D.one('SELECT photo FROM setups WHERE account_id=?', ctx.account.id)).photo;
+  await D.run('UPDATE setups SET photo=? WHERE account_id=?', url, ctx.account.id);
+  await D.removeImage(old);
   return { photo: url };
 });
 
-function galleryLimit(accId) {
-  const reg = D.one('SELECT * FROM registrations WHERE account_id=?', accId);
-  return D.permsOf(reg, D.plansMap()).galeria ? GALLERY_PLAN : GALLERY_FREE;
+async function galleryLimit(accId) {
+  const reg = await D.one('SELECT * FROM registrations WHERE account_id=?', accId);
+  return D.permsOf(reg, await D.plansMap()).galeria ? GALLERY_PLAN : GALLERY_FREE;
 }
-R.post('/api/me/gallery', { auth: true, raw: true }, ctx => {
+R.post('/api/me/gallery', { auth: true, raw: true }, async ctx => {
   if (!D.isProAcc(ctx.account)) throw new HttpError(403, 'A galeria é para perfis profissionais.');
-  const max = galleryLimit(ctx.account.id);
-  if (D.one('SELECT COUNT(*) n FROM photos WHERE account_id=?', ctx.account.id).n >= max)
+  const max = await galleryLimit(ctx.account.id);
+  if ((await D.one('SELECT COUNT(*) n FROM photos WHERE account_id=?', ctx.account.id)).n >= max)
     throw new HttpError(409, `Você já tem ${max} fotos. Remova uma ou escolha um plano com galeria maior.`);
-  const url = D.saveImage(ctx.body);
-  const r = D.run('INSERT INTO photos(account_id,file,created_at) VALUES(?,?,?)', ctx.account.id, url, D.now());
+  const url = await D.saveImage(ctx.body);
+  const r = await D.run('INSERT INTO photos(account_id,file,created_at) VALUES(?,?,?)', ctx.account.id, url, D.now());
   return { id: Number(r.lastInsertRowid), url, max };
 });
-R.delete('/api/me/gallery/:id', { auth: true }, ctx => {
-  const p = D.one('SELECT * FROM photos WHERE id=? AND account_id=?', +ctx.params.id, ctx.account.id);
+R.delete('/api/me/gallery/:id', { auth: true }, async ctx => {
+  const p = await D.one('SELECT * FROM photos WHERE id=? AND account_id=?', +ctx.params.id, ctx.account.id);
   if (!p) throw new HttpError(404, 'Foto não encontrada.');
-  D.run('DELETE FROM photos WHERE id=?', p.id);
-  D.removeImage(p.file);
+  await D.run('DELETE FROM photos WHERE id=?', p.id);
+  await D.removeImage(p.file);
   return { ok: true };
 });
 
 /* ---------- favoritos e seguidores ---------- */
-R.post('/api/favorites/toggle', { auth: true }, ctx => {
+R.post('/api/favorites/toggle', { auth: true }, async ctx => {
   const ref = String(ctx.body.ref || ''), m = ref.match(/^([pl])(\d+)$/);
   if (!m) throw new HttpError(400, 'Item inválido.');
   const exists = m[1] === 'p'
-    ? D.one(`SELECT 1 FROM setups WHERE account_id=? AND done=1`, +m[2])
-    : D.one(`SELECT 1 FROM listings WHERE id=? AND status='aprovado' AND hidden=0`, +m[2]);
-  const had = D.one('SELECT 1 FROM favorites WHERE account_id=? AND ref=?', ctx.account.id, ref);
-  if (had) D.run('DELETE FROM favorites WHERE account_id=? AND ref=?', ctx.account.id, ref);
+    ? await D.one(`SELECT 1 FROM setups WHERE account_id=? AND done=1`, +m[2])
+    : await D.one(`SELECT 1 FROM listings WHERE id=? AND status='aprovado' AND hidden=0`, +m[2]);
+  const had = await D.one('SELECT 1 FROM favorites WHERE account_id=? AND ref=?', ctx.account.id, ref);
+  if (had) await D.run('DELETE FROM favorites WHERE account_id=? AND ref=?', ctx.account.id, ref);
   else if (!exists) throw new HttpError(404, 'Item não encontrado.');
-  else D.run('INSERT INTO favorites(account_id,ref) VALUES(?,?)', ctx.account.id, ref);
+  else await D.run('INSERT INTO favorites(account_id,ref) VALUES(?,?)', ctx.account.id, ref);
   return { on: !had };
 });
 
-R.post('/api/follows/toggle', { auth: true }, ctx => {
+R.post('/api/follows/toggle', { auth: true }, async ctx => {
   const m = String(ctx.body.pro || '').match(/^p(\d+)$/);
   if (!m) throw new HttpError(400, 'Perfil inválido.');
   const id = +m[1];
   if (id === ctx.account.id) throw new HttpError(400, 'Você não pode seguir o próprio perfil.');
-  const target = D.one('SELECT * FROM accounts WHERE id=?', id);
+  const target = await D.one('SELECT * FROM accounts WHERE id=?', id);
   if (!target || !D.isProAcc(target)) throw new HttpError(404, 'Perfil não encontrado.');
-  const had = D.one('SELECT 1 FROM follows WHERE account_id=? AND pro_id=?', ctx.account.id, id);
-  if (had) D.run('DELETE FROM follows WHERE account_id=? AND pro_id=?', ctx.account.id, id);
-  else { D.run('INSERT INTO follows(account_id,pro_id) VALUES(?,?)', ctx.account.id, id); D.notify(id, 'follow', `${ctx.account.nome.split(' ')[0]} começou a seguir você.`); }
+  const had = await D.one('SELECT 1 FROM follows WHERE account_id=? AND pro_id=?', ctx.account.id, id);
+  if (had) await D.run('DELETE FROM follows WHERE account_id=? AND pro_id=?', ctx.account.id, id);
+  else { await D.run('INSERT INTO follows(account_id,pro_id) VALUES(?,?)', ctx.account.id, id); await D.notify(id, 'follow', `${ctx.account.nome.split(' ')[0]} começou a seguir você.`); }
   return { on: !had };
 });
 
 /* ---------- notificações ---------- */
-R.get('/api/notifications', { auth: true }, ctx => ({
-  items: D.all('SELECT id, kind, text, link, read, created_at FROM notifications WHERE account_id=? ORDER BY id DESC LIMIT 40', ctx.account.id)
+R.get('/api/notifications', { auth: true }, async ctx => ({
+  items: await D.all('SELECT id, kind, text, link, read, created_at FROM notifications WHERE account_id=? ORDER BY id DESC LIMIT 40', ctx.account.id)
 }));
-R.post('/api/notifications/read', { auth: true }, ctx => { D.run('UPDATE notifications SET read=1 WHERE account_id=?', ctx.account.id); return { ok: true }; });
-R.get('/api/counters', { auth: true }, ctx => counters(ctx.account.id));
+R.post('/api/notifications/read', { auth: true }, async ctx => { await D.run('UPDATE notifications SET read=1 WHERE account_id=?', ctx.account.id); return { ok: true }; });
+R.get('/api/counters', { auth: true }, async ctx => await counters(ctx.account.id));

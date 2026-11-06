@@ -72,3 +72,17 @@ python3 test/e2e.py       # navegador de verdade (Playwright + Chromium): fluxo 
 - Mensagens e contadores atualizam por consulta periódica (5 s / 30 s), não em tempo real.
 - O pagamento pelo Mercado Pago foi testado contra um simulador local; faça uma compra de teste com as suas credenciais antes de abrir ao público.
 - Endereço e CEP usam os serviços públicos Nominatim e ViaCEP direto do navegador.
+
+## Publicar na Vercel
+
+1. Crie um banco gratuito no Turso (turso.tech) e anote a URL (`libsql://...`) e o token.
+2. Suba esta pasta para um repositório no GitHub e importe o repositório na Vercel (sem comando de build).
+3. Em Settings → Environment Variables da Vercel, preencha:
+   - `TURSO_DATABASE_URL` e `TURSO_AUTH_TOKEN`
+   - `CRON_SECRET` (qualquer texto longo e aleatório; a Vercel o envia ao Cron diário)
+   - opcionais: `RESEND_API_KEY`, `MAIL_FROM`, `MP_ACCESS_TOKEN`, `CONTACT_EMAIL`, `APP_TZ`
+4. Faça o deploy. As tabelas são criadas sozinhas no primeiro acesso.
+5. Para criar a administradora, cadastre-se no site e rode no seu computador:
+   `TURSO_DATABASE_URL=... TURSO_AUTH_TOKEN=... npm install && npm run make-admin -- seu@email.com`
+
+Na Vercel as fotos ficam no próprio banco (limite de 4 MB por foto) e os avisos de plano e lembretes rodam uma vez por dia pelo Cron.

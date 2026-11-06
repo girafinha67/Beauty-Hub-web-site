@@ -25,7 +25,7 @@ before(async () => {
   pro = T.client(); adm = T.client();
   await pro.post('/api/auth/signup', { nome: 'Helena Duarte', tel: '41999998888', doc: CPF[0], email: 'h@x.com', senha: 'Senha@123', aceite: true, obj: 'divulgar' });
   await adm.post('/api/auth/signup', { nome: 'Admin Geral', tel: '41999998888', doc: CPF[1], email: 'a@x.com', senha: 'Senha@123', aceite: true, obj: 'encontrar' });
-  T.db.run(`UPDATE accounts SET role='admin' WHERE email='a@x.com'`);
+  await T.db.run(`UPDATE accounts SET role='admin' WHERE email='a@x.com'`);
 });
 after(() => { T.server.close(); mpServer.close(); });
 
@@ -51,7 +51,7 @@ test('webhook só libera o plano com pagamento aprovado e valor correto, uma ún
   let reg = await active(); assert.equal(reg.payOk, true); assert.equal(reg.active, true);
   const until = reg.paid_until;
   await hook('1003'); assert.equal((await active()).paid_until, until, 'repetir o aviso não estende o plano');
-  assert.equal(T.db.one('SELECT COUNT(*) n FROM payments').n, 1);
+  assert.equal((await T.db.one('SELECT COUNT(*) n FROM payments')).n, 1);
 });
 
 test('retorno do checkout confirma pelo próprio usuário, mas só o próprio cadastro', async () => {

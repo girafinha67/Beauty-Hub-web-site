@@ -119,6 +119,7 @@ document.addEventListener('click',e=>{
   if(t.closest('[data-sfinish]')){finishSignup();return}
   /* perfil */
   if(el=t.closest('[data-ptab]')){PT=el.dataset.ptab;meuPerfil();return}
+  if(t.closest('[data-delbanner]')){act(async()=>{await DEL('/api/me/banner');await loadMe();toast('Banner removido');meuPerfil()});return}
   if(el=t.closest('[data-delphoto]')){act(async()=>{await DEL('/api/me/gallery/'+el.dataset.delphoto);await loadMe();toast('Foto removida');meuPerfil()});return}
   if(t.closest('[data-delete-profile]')){const b=t.closest('[data-delete-profile]');if(b.dataset.sure){act(async()=>{await POST('/api/registration/delete');await loadMe();D=newDraft();toast('Cadastro excluído');meuPerfil()})}else{b.dataset.sure='1';b.textContent='Toque de novo para confirmar a exclusão'}return}
   if(t.closest('[data-delaccount]')){openSheet(`${closeBtn}<div class="body"><h2>Excluir minha conta</h2><p style="margin:0;color:var(--muted)">Isso apaga seus dados, agendamentos, mensagens e anúncios, e não pode ser desfeito. Confirme com a sua senha.</p><form class="form" id="delete-form" novalidate><div class="f"><label for="dl-s">Senha</label><input id="dl-s" type="password" autocomplete="current-password"></div><div class="err" id="dl-err" role="alert" style="color:var(--bad);font-size:13px"></div><button class="btn" type="submit">Excluir definitivamente</button></form></div>`);return}
@@ -145,6 +146,17 @@ document.addEventListener('change',e=>{
     const k=d.pplan,box=t.closest('[data-plan-panel]'),perms={proc:parseInt($('#pc-'+k).value,10)};
     $$('[data-pperm]',box).forEach(c=>perms[c.dataset.pperm]=c.checked);
     act(async()=>{const r=await PUT('/api/admin/plans/'+k,{price:parseFloat($('#pp-'+k).value),perms});S.plans=r.plans;toast('Plano atualizado')});
+    return;
+  }
+  if(t.type==='file'&&d.bnadd!==undefined){
+    const f=t.files[0];if(!f)return;if(!/^image\//.test(f.type)){toast('Escolha uma imagem');return}
+    const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{
+      /* recorta no formato do banner (5:2), mantendo o centro da foto */
+      const W=1600,H=640,c=document.createElement('canvas');c.width=W;c.height=H;
+      const k=Math.max(W/im.width,H/im.height),sw=W/k,sh=H/k;
+      c.getContext('2d').drawImage(im,(im.width-sw)/2,(im.height-sh)/2,sw,sh,0,0,W,H);
+      c.toBlob(b=>act(async()=>{await API('POST','/api/me/banner',b,true);await loadMe();toast('Banner atualizado');meuPerfil()}),'image/jpeg',.86)};
+      im.onerror=()=>toast('Não consegui abrir essa imagem');im.src=r.result};r.readAsDataURL(f);t.value='';
     return;
   }
   if(t.type==='file'&&d.galadd!==undefined){

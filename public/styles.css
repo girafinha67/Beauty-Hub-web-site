@@ -672,3 +672,70 @@ html[data-dev="m"] .sheet .body{padding:30px 22px 24px}
 .pp-cover{margin:0;border-radius:24px}
 .pp-info b{font-size:17px}
 .pp-info b.pr{font-size:22px}
+
+/* ===== Banner do perfil da profissional ===== */
+.pp{--ov:58px}
+.pp-cover{position:relative;height:200px;margin:0;border-radius:0 0 30px 30px;overflow:hidden;background:linear-gradient(135deg,var(--wine),var(--rose))}
+.pp-cover img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.pp-cover.has-img::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(43,10,24,.0) 55%,rgba(43,10,24,.28));pointer-events:none}
+html[data-dev="m"] .pp-cover{margin:0 -20px}
+html[data-dev="d"] .pp-cover{height:260px;border-radius:26px}
+.pp-id{align-items:flex-start;margin:calc(-1*var(--ov)) 0 14px}
+.pp-id>div{padding-top:calc(var(--ov) + 12px);min-width:0}
+.pp-id .ap-av{box-shadow:0 6px 18px rgba(43,10,24,.22)}
+/* edição do banner em Meu perfil */
+.bn-h{font-family:var(--body);font-size:16px;font-weight:600;margin:4px 0 10px}
+.bn-edit{aspect-ratio:5/2;border-radius:18px;overflow:hidden;background:linear-gradient(135deg,var(--wine),var(--rose));display:grid;place-items:center;color:#fff;margin-bottom:12px}
+.bn-edit img{width:100%;height:100%;object-fit:cover;display:block}
+.bn-edit span{display:flex;gap:8px;align-items:center;font-size:13.5px;padding:0 16px;text-align:center}
+.bn-pick{cursor:pointer}
+.bn-tip{color:var(--muted);font-size:13px;margin:10px 0 22px}
+
+/* ===== Barra de navegação: Liquid Glass ===== */
+.tabbar{
+  background:
+    linear-gradient(135deg,rgba(255,255,255,.66) 0%,rgba(255,255,255,.30) 48%,rgba(247,233,235,.46) 100%);
+  -webkit-backdrop-filter:blur(22px) saturate(185%);
+  backdrop-filter:blur(22px) saturate(185%);
+  border:1px solid rgba(255,255,255,.60);
+  border-radius:32px;padding:7px;gap:2px;
+  box-shadow:
+    0 14px 34px rgba(74,14,36,.20),
+    0 2px 6px rgba(74,14,36,.08),
+    inset 0 1.5px 1px rgba(255,255,255,.95),
+    inset 0 -1px 1px rgba(255,255,255,.40),
+    inset 0 0 22px rgba(255,255,255,.28);
+  isolation:isolate;
+}
+/* aro de luz com espectro suave (rosé → lilás → azul-gelo → dourado) */
+.tabbar::before{
+  content:"";position:absolute;inset:0;border-radius:inherit;padding:1.5px;pointer-events:none;z-index:0;
+  background:linear-gradient(115deg,rgba(255,170,190,.85),rgba(190,160,255,.70) 28%,rgba(140,205,255,.70) 52%,rgba(255,225,160,.75) 76%,rgba(255,170,190,.85));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);
+  opacity:.75;
+}
+/* brilho especular no topo do vidro */
+.tabbar::after{
+  content:"";position:absolute;left:10%;right:10%;top:1px;height:42%;border-radius:999px;pointer-events:none;z-index:0;
+  background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,0));
+  opacity:.7;
+}
+.tabbar button{position:relative;z-index:1;color:#4A2A38;border-radius:25px;
+  transition:transform .28s cubic-bezier(.34,1.56,.64,1),background .25s,color .25s,box-shadow .25s}
+.tabbar button:active{transform:scale(.94)}
+.tabbar button[aria-current="page"]{
+  color:#fff;
+  background:linear-gradient(150deg,rgba(110,24,58,.94),rgba(74,14,36,.88));
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  box-shadow:
+    0 6px 16px rgba(74,14,36,.32),
+    inset 0 1.5px 1px rgba(255,255,255,.38),
+    inset 0 -2px 6px rgba(0,0,0,.18);
+}
+.tabbar button:focus-visible{outline:2px solid #fff;outline-offset:-3px;box-shadow:0 0 0 3px rgba(74,14,36,.55)}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .tabbar{background:rgba(255,255,255,.94)}
+}
+@media (prefers-reduced-transparency:reduce){.tabbar{background:rgba(255,255,255,.96);-webkit-backdrop-filter:none;backdrop-filter:none}}
+@media (prefers-reduced-motion:reduce){.tabbar button{transition:none}}

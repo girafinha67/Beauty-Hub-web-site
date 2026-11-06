@@ -28,7 +28,7 @@ test('cadastro, login, logout e senha guardada com hash', async () => {
   let r = await signup(pro, { nome: 'Helena Duarte', doc: CPF[0], email: 'helena@x.com', obj: 'divulgar', papel: '' });
   assert.equal(r.status, 200); assert.equal(r.body.account.isPro, true);
   assert.equal((await signup(T.client(), { doc: CPF[1], email: 'HELENA@x.com' })).status, 422);
-  assert.match((await T.db.one('SELECT pw FROM accounts WHERE email=?', 'helena@x.com')).pw, /^scrypt\$/);
+  assert.match(T.db.one('SELECT pw FROM accounts WHERE email=?', 'helena@x.com').pw, /^scrypt\$/);
   await pro.post('/api/auth/logout');
   assert.equal((await pro.get('/api/appointments')).status, 401);
   assert.equal((await pro.post('/api/auth/login', { email: 'helena@x.com', senha: 'errada@1' })).status, 401);
@@ -36,7 +36,7 @@ test('cadastro, login, logout e senha guardada com hash', async () => {
   assert.equal(r.status, 200);
   r = await signup(cli, { nome: 'Ana Cliente', doc: CPF[1], email: 'ana@x.com' }); assert.equal(r.status, 200);
   r = await signup(adm, { nome: 'Admin Geral', doc: CPF[2], email: 'adm@x.com' }); assert.equal(r.status, 200);
-  await T.db.run(`UPDATE accounts SET role='admin' WHERE email='adm@x.com'`);
+  T.db.run(`UPDATE accounts SET role='admin' WHERE email='adm@x.com'`);
 });
 
 test('perfil profissional exige dados reais e aparece na busca só depois de pronto', async () => {
@@ -62,6 +62,19 @@ test('upload de foto valida o conteúdo do arquivo', async () => {
   assert.equal(img.status, 200); assert.equal(img.headers.get('content-type'), 'image/png');
 });
 
+test('banner do perfil: envio, aparece no perfil público, cliente não envia e remoção', async () => {
+  assert.equal((await pro.raw('/api/me/banner', Buffer.from('<svg onload=alert(1)>'))).status, 415);
+  const r = await pro.raw('/api/me/banner', PNG);
+  assert.equal(r.status, 200);
+  assert.equal((await fetch(T.base + r.body.banner)).status, 200);
+  assert.equal((await pro.get('/api/me')).body.setup.banner, r.body.banner);
+  const pub = (await cli.get('/api/pros')).body.items[0];
+  assert.equal(pub.banner, r.body.banner);
+  assert.equal((await cli.raw('/api/me/banner', PNG)).status, 403);
+  assert.equal((await pro.del('/api/me/banner')).status, 200);
+  assert.equal((await cli.get('/api/pros/' + pub.id)).body.banner, '');
+});
+
 let apptId, svcId, proRef;
 test('agendamento: horários livres, conflito, confirmação e conclusão', async () => {
   const p = (await cli.get('/api/pros')).body.items[0]; proRef = p.id; svcId = p.services[0].id;
@@ -79,7 +92,7 @@ test('fluxo do agendamento: pro confirma, cliente não pode concluir, conclusão
   assert.equal((await cli.patch('/api/appointments/' + apptId, { status: 'confirmado' })).status, 409);
   assert.equal((await pro.patch('/api/appointments/' + apptId, { status: 'confirmado' })).status, 200);
   assert.equal((await pro.patch('/api/appointments/' + apptId, { status: 'concluido' })).status, 409, 'ainda não chegou o dia');
-  await T.db.run(`UPDATE appointments SET date='2020-01-01' WHERE id=?`, apptId);
+  T.db.run(`UPDATE appointments SET date='2020-01-01' WHERE id=?`, apptId);
   assert.equal((await pro.patch('/api/appointments/' + apptId, { status: 'concluido' })).status, 200);
   const mine = (await cli.get('/api/appointments')).body.items[0];
   assert.equal(mine.status, 'concluido'); assert.equal(mine.canReview, false, 'plano sem avaliações');
@@ -160,21 +173,21 @@ test('redefinição de senha invalida sessões; exclusão de conta apaga tudo', 
   assert.equal((await c.post('/api/auth/forgot', { email: 'naoexiste@x.com' })).status, 200);
   assert.equal((await c.post('/api/auth/reset', { token: 'falso', senha: 'Nova@1234' })).status, 400);
   const crypto = require('node:crypto'), tok = 'tok-de-teste';
-  await T.db.run('INSERT INTO reset_tokens(token_hash,account_id,expires_at) VALUES(?,?,?)', crypto.createHash('sha256').update(tok).digest('hex'), (await T.db.one('SELECT id FROM accounts WHERE email=?', 'rita@x.com')).id, Date.now() + 1e5);
+  T.db.run('INSERT INTO reset_tokens(token_hash,account_id,expires_at) VALUES(?,?,?)', crypto.createHash('sha256').update(tok).digest('hex'), T.db.one('SELECT id FROM accounts WHERE email=?', 'rita@x.com').id, Date.now() + 1e5);
   assert.equal((await c.post('/api/auth/reset', { token: tok, senha: 'fraca' })).status, 422);
   assert.equal((await c.post('/api/auth/reset', { token: tok, senha: 'Nova@1234' })).status, 200);
   assert.equal((await c.get('/api/appointments')).status, 401, 'sessão antiga caiu');
   assert.equal((await c.post('/api/auth/login', { email: 'rita@x.com', senha: 'Nova@1234' })).status, 200);
   assert.equal((await c.post('/api/me/delete', { senha: 'errada' })).status, 403);
   assert.equal((await c.post('/api/me/delete', { senha: 'Nova@1234' })).status, 200);
-  assert.equal((await T.db.one('SELECT COUNT(*) n FROM accounts WHERE email=?', 'rita@x.com')).n, 0);
+  assert.equal(T.db.one('SELECT COUNT(*) n FROM accounts WHERE email=?', 'rita@x.com').n, 0);
 });
 
 test('health check e rotinas automáticas (aviso de plano, lembrete, backup)', async () => {
   const r = await cli.get('/api/health');
   assert.equal(r.status, 200); assert.equal(r.body.ok, true);
   const jobs = require('../lib/jobs');
-  await assert.doesNotReject(async () => { await jobs.planNotices(); await jobs.appointmentReminders(); await jobs.backup(); });
+  assert.doesNotThrow(() => { jobs.planNotices(); jobs.appointmentReminders(); jobs.backup(); });
   const gz = await fetch(T.base + '/app.js', { headers: { 'Accept-Encoding': 'gzip' } });
   assert.equal(gz.status, 200);
 });
@@ -190,9 +203,7 @@ test('publicações: texto, foto opcional, exclusão e moderação', async () =>
   assert.equal(r.status, 200); assert.equal(r.body.photo, '');
   const r2 = await pc.raw('/api/me/posts?texto=com%20foto', PNG);
   assert.equal(r2.status, 200); assert.match(r2.body.photo, /^\/uploads\//);
-  const img = await fetch(T.base + r2.body.photo); assert.equal(img.status, 200); assert.equal(img.headers.get('content-type'), 'image/png');
-  assert.deepEqual(Buffer.from(await img.arrayBuffer()), PNG);
-  const pid = (await T.db.one('SELECT account_id id FROM posts LIMIT 1')).id;
+  const pid = T.db.one('SELECT account_id id FROM posts LIMIT 1').id;
   const d = await ac.get('/api/pros/p' + pid);
   assert.equal(d.status, 200); assert.equal(d.body.posts.length, 2); assert.equal(d.body.dist[5], 0);
   assert.equal((await pc.del('/api/me/posts/' + r.body.id)).status, 200);

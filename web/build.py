@@ -18,8 +18,7 @@ html = ('<!doctype html>\n<html lang="pt-BR">\n<head>\n<meta charset="utf-8">\n'
  '<title>Beauty Hub</title>\n<link rel="icon" href="' + FAV + '">\n' + font + '\n<link rel="stylesheet" href="/styles.css">\n'
  '</head>\n<body>\n<div id="app"></div>\n<div id="ov" class="ov" hidden></div>\n<div id="toast" role="status" aria-live="polite"></div>\n'
  '<script src="/app.js"></script>\n</body>\n</html>\n')
-rules = open(os.path.join(d, '..', 'lib', 'rules.js'), encoding='utf-8').read()
-js = rules + '\n' + '\n'.join(r(f) for f in ['data.js', 'api.js', 'app1.js', 'app2.js', 'app3.js', 'auth.js', 'app5.js', 'pubs.js', 'app4.js'])
+js = '\n'.join(r(f) for f in ['data.js', 'api.js', 'app1.js', 'app2.js', 'app3.js', 'auth.js', 'app5.js', 'pubs.js', 'app4.js'])
 for name, text in (('index.html', html), ('styles.css', css), ('app.js', js)):
     open(os.path.join(out, name), 'w', encoding='utf-8').write(text)
 print('ok', len(html), len(css), len(js))

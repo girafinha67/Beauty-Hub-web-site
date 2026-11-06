@@ -43,26 +43,26 @@ try:
 
         step('login protegido: sem conta cai em #entrar e mostra erro real com senha errada')
         A.goto(base); A.wait_for_url(re.compile(r'#entrar$'))
-        fill(A, '#l-email', 'ninguem@gmail.com'); fill(A, '#l-senha', 'Senha@123'); A.click('#login-form button[type=submit]')
+        fill(A, '#l-email', 'ninguem@x.com'); fill(A, '#l-senha', 'Senha@123'); A.click('#login-form button[type=submit]')
         A.wait_for_selector('#l-err:has-text("incorretos")')
 
         step('profissional cria conta e completa o perfil (dados vão para o servidor)')
-        signup(A, 'pro', 'Helena Duarte', '52998224725', 'helena.duarte@gmail.com', True)
+        signup(A, 'pro', 'Helena Duarte', '52998224725', 'helena@x.com', True)
         address(A)
         fill(A, '#x-nomeProf', 'Helena Lash'); A.select_option('#x-spec', 'Lash Designer')
         A.click('[data-xaddsvc]'); A.fill('#sp0', '260')
         A.click('[data-xfinish]'); A.wait_for_url(re.compile(r'#home$'))
-        A.wait_for_selector('.pk:has-text("Helena Lash")')
+        A.wait_for_selector('.pc:has-text("Helena Lash")')
         A.screenshot(path=f'{shots}/pro-home.png')
 
         step('cliente cria conta, completa e vê a profissional real (nenhuma fictícia)')
-        signup(B, 'cli', 'Ana Souza', '11144477735', 'ana.souza@gmail.com', False)
+        signup(B, 'cli', 'Ana Souza', '11144477735', 'ana@x.com', False)
         address(B); B.click('[data-xfinish]'); B.wait_for_url(re.compile(r'#home$'))
-        B.wait_for_selector('.pk:has-text("Helena Lash")')
-        n = B.locator('.pk').count(); assert n == 1, f'esperava 1 profissional, achei {n}'
+        B.wait_for_selector('.pc:has-text("Helena Lash")')
+        n = B.locator('.pc').count(); assert n == 1, f'esperava 1 profissional, achei {n}'
 
         step('cliente abre o perfil e solicita horário com horários livres vindos do servidor')
-        B.click('.pk:has-text("Helena Lash") .pk-ph'); B.click('[data-xbook]')
+        B.click('.pc:has-text("Helena Lash")'); B.click('[data-xbook]')
         d0 = datetime.date.today() + datetime.timedelta(days=2)
         while (d0.weekday() + 1) % 7 not in (2, 3, 4, 5, 6): d0 += datetime.timedelta(days=1)  # dias de atendimento padrão: ter a sáb
         day = d0.isoformat()
@@ -80,7 +80,7 @@ try:
         A.click('[data-xnotif]'); A.wait_for_selector('.nrow:has-text("solicitou")'); A.keyboard.press('Escape')
 
         step('mensagens: cliente escreve, profissional recebe com contador')
-        B.goto(base + '/#home'); B.reload(); B.click('.pk:has-text("Helena Lash") .pk-ph'); B.click('[data-msg]')
+        B.goto(base + '/#home'); B.reload(); B.click('.pc:has-text("Helena Lash")'); B.click('[data-msg]')
         B.wait_for_selector('#msg-t'); B.fill('#msg-t', 'Oi! Posso levar uma amiga?'); B.press('#msg-t', 'Enter') if False else B.click('#msg-form button')
         B.wait_for_selector('.bub.me:has-text("amiga")')
         B.screenshot(path=f'{shots}/cli-chat.png')
@@ -97,9 +97,9 @@ try:
         A.screenshot(path=f'{shots}/pro-plano.png', full_page=True)
 
         step('admin real: só entra quem é admin; aprova e confirma pagamento')
-        subprocess.run(['node', '--disable-warning=ExperimentalWarning', 'scripts/make-admin.js', 'x@gmail.com'], cwd=root, env=env, capture_output=True)
-        signup(C, 'adm', 'Admin Geral', '39053344705', 'admin.geral@gmail.com', False)
-        subprocess.run(['node', '--disable-warning=ExperimentalWarning', 'scripts/make-admin.js', 'admin.geral@gmail.com'], cwd=root, env=env, check=True, capture_output=True)
+        subprocess.run(['node', '--disable-warning=ExperimentalWarning', 'scripts/make-admin.js', 'x@x.com'], cwd=root, env=env, capture_output=True)
+        signup(C, 'adm', 'Admin Geral', '39053344705', 'adm@x.com', False)
+        subprocess.run(['node', '--disable-warning=ExperimentalWarning', 'scripts/make-admin.js', 'adm@x.com'], cwd=root, env=env, check=True, capture_output=True)
         C.fill('#x-rua', 'Rua B'); C.fill('#x-num', '1'); C.fill('#x-cidade', 'Curitiba'); C.select_option('#x-uf', 'PR'); C.click('[data-xfinish]'); C.wait_for_url(re.compile(r'#home$'))
         C.reload(); C.goto(base + '/#admin'); C.reload(); C.wait_for_selector('h1:has-text("Painel administrativo")')
         C.click('[data-atab=cad]'); C.wait_for_selector('tr:has-text("Helena")')
@@ -114,7 +114,7 @@ try:
         A.goto(base + '/#agendamentos'); A.reload(); A.click('[data-aact$=":concluido"]'); A.wait_for_selector('.pc.ag:has-text("Concluído")')
         B.goto(base + '/#agendamentos'); B.reload(); B.click('[data-review]'); B.click('[data-star="5"]'); B.fill('#rv-t', 'Amei o resultado!'); B.click('[data-sendreview]')
         B.wait_for_selector('#toast .toast:has-text("Avalia")')
-        B.goto(base + '/#home'); B.reload(); B.wait_for_selector('.pk:has-text("Helena Lash") .pk-rev u')
+        B.goto(base + '/#home'); B.reload(); B.wait_for_selector('.pc:has-text("Helena Lash") .rate')
 
         step('network: pergunta publicada e visível')
         B.goto(base + '/#network'); B.reload(); B.click('[data-newthread]'); B.fill('#nt-q', 'Qual cola vocês recomendam para volume?'); B.click('#thread-form button')

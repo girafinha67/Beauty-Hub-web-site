@@ -6,9 +6,8 @@ const D = require('../lib/domain');
 const cfg = require('../lib/config');
 const { sendMail } = require('../lib/mail');
 const { meJson } = require('../lib/me');
-const verify = require('../lib/verify');
 
-const checkLimit = S.limiter(60, 6e5), signupLimit = S.limiter(10, 36e5), loginIp = S.limiter(30, 9e5), loginMail = S.limiter(8, 9e5), forgotLimit = S.limiter(5, 36e5);
+const signupLimit = S.limiter(10, 36e5), loginIp = S.limiter(30, 9e5), loginMail = S.limiter(8, 9e5), forgotLimit = S.limiter(5, 36e5);
 const EMAIL_NORM = v => String(v || '').trim().toLowerCase();
 
 R.get('/api/me', ctx => meJson(ctx.account));
@@ -19,14 +18,12 @@ R.post('/api/auth/signup', async ctx => {
   const enc = b.obj !== 'divulgar';
   const obj = enc ? 'encontrar' : 'divulgar';
   const papel = enc ? (['Cliente', 'Aluna ou estudante', 'Profissional de beleza'].includes(b.papel) ? b.papel : 'Cliente') : '';
-  const nome = V.str(b.nome, 120).replace(/\s+/g, ' '), email = EMAIL_NORM(b.email), tel = V.digits(b.tel), doc = V.digits(b.doc);
-  E.nome = V.nomeErro(nome);
+  const nome = V.str(b.nome, 120), email = EMAIL_NORM(b.email), tel = V.digits(b.tel), doc = V.digits(b.doc);
+  if (nome.split(/\s+/).filter(Boolean).length < 2 || nome.length < 5) E.nome = 'Informe seu nome completo.';
   if (tel.length < 10 || tel.length > 11) E.tel = 'Informe o telefone com DDD.';
   if (enc ? !V.cpfOk(doc) : !(V.cpfOk(doc) || V.cnpjOk(doc))) E.doc = enc ? 'CPF inválido. Confira os números.' : 'CPF ou CNPJ inválido. Confira os números.';
-  else if (doc.length === 14) E.doc = (await verify.cnpjReceita(doc)).msg;
-  E.email = V.emailErro(email) || (await verify.emailDomain(email));
-  if (!E.email && D.one('SELECT 1 FROM accounts WHERE email=?', email)) E.email = 'Este e-mail já tem cadastro. Volte e entre na sua conta.';
-  for (const k of ['nome', 'doc', 'email']) if (!E[k]) delete E[k];
+  if (!V.emailOk(email)) E.email = 'Informe um e-mail válido, como nome@email.com.';
+  else if (D.one('SELECT 1 FROM accounts WHERE email=?', email)) E.email = 'Este e-mail já tem cadastro. Volte e entre na sua conta.';
   if (!V.senhaOk(b.senha)) E.senha = 'A senha precisa de 8 caracteres, um número e um caractere especial.';
   if (b.aceite !== true) E.aceite = 'Aceite os termos para continuar.';
   if (Object.keys(E).length) throw new HttpError(422, 'Confira os campos.', E);
@@ -37,29 +34,10 @@ R.post('/api/auth/signup', async ctx => {
   return meJson(D.one('SELECT * FROM accounts WHERE id=?', Number(r.lastInsertRowid)));
 });
 
-/* Conferência de um campo enquanto a pessoa digita (sem criar nada). */
-R.post('/api/validate', async ctx => {
-  if (!checkLimit(ctx.ip)) throw new HttpError(429, 'Muitas conferências. Aguarde um pouco.');
-  const { campo, valor } = ctx.body || {};
-  if (campo === 'email') { const e = EMAIL_NORM(valor); const msg = V.emailErro(e) || (await verify.emailDomain(e)); return { ok: !msg, msg }; }
-  if (campo === 'nome') { const msg = V.nomeErro(valor); return { ok: !msg, msg }; }
-  if (campo === 'doc') {
-    const d = V.digits(valor);
-    if (d.length === 11) return V.cpfOk(d) ? { ok: true, msg: '', tipo: 'CPF' } : { ok: false, msg: 'CPF inválido. Confira os números.' };
-    if (d.length === 14) {
-      if (!V.cnpjOk(d)) return { ok: false, msg: 'CNPJ inválido. Confira os números.' };
-      const r = await verify.cnpjReceita(d); return { ok: !r.msg, msg: r.msg, tipo: 'CNPJ', razao: r.razao || '' };
-    }
-    return { ok: false, msg: 'Digite os 11 números do CPF ou os 14 do CNPJ.' };
-  }
-  throw new HttpError(400, 'Campo inválido.');
-});
-
 R.post('/api/auth/login', async ctx => {
   const email = EMAIL_NORM(ctx.body.email), pw = typeof ctx.body.senha === 'string' ? ctx.body.senha : '';
   if (!loginIp(ctx.ip) || !loginMail(email)) throw new HttpError(429, 'Muitas tentativas. Aguarde alguns minutos.');
-  if (!email || !pw) throw new HttpError(400, 'Informe seu e-mail e sua senha.');
-  if (!V.emailOk(email)) throw new HttpError(400, 'Informe um e-mail válido.');
+  if (!V.emailOk(email) || !pw) throw new HttpError(400, 'Informe seu e-mail e sua senha.');
   const acc = D.one('SELECT * FROM accounts WHERE email=?', email);
   if (!acc) { await S.burnTime(pw); throw new HttpError(401, 'E-mail ou senha incorretos.'); }
   if (!(await S.verifyPassword(pw, acc.pw))) throw new HttpError(401, 'E-mail ou senha incorretos.');

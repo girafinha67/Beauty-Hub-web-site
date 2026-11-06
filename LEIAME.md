@@ -23,7 +23,7 @@ O link "Painel administrativo" aparece no menu dessa conta.
 
 | Área | Como funciona |
 |---|---|
-| Conta | Cadastro com nome completo, CPF/CNPJ e e-mail validados (no navegador ao sair do campo e de novo no servidor; regras em `lib/rules.js`, a mesma para os dois). CNPJ conferido na Receita (BrasilAPI) e domínio do e-mail conferido por DNS, a menos que `VERIFY_ONLINE=0`; senha com scrypt, sessão em cookie HttpOnly, limite de tentativas de login, redefinição de senha por e-mail, exclusão da própria conta (LGPD) |
+| Conta | Cadastro com CPF/CNPJ validado no servidor, senha com scrypt, sessão em cookie HttpOnly, limite de tentativas de login, redefinição de senha por e-mail, exclusão da própria conta (LGPD) |
 | Perfil | Endereço, serviços, horários, contatos; foto e galeria enviadas de verdade (JPG/PNG/WebP, conferidas pelo conteúdo do arquivo) |
 | Busca | Só aparecem profissionais reais com perfil completo; filtros, favoritos e seguidores salvos por conta |
 | Agendamento | Horários livres calculados no servidor (dias, expediente, duração do serviço, conflitos); a profissional confirma, recusa ou conclui; o cliente cancela |

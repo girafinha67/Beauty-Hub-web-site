@@ -9,14 +9,14 @@ function postCard(p,who){
    ${p.texto?`<p>${esc(p.texto)}</p>`:''}${p.photo?`<img src="${esc(p.photo)}" alt="Foto da publicação de ${esc(who.name)}" loading="lazy">`:''}</article>`;
 }
 async function proPage(id){
-  if(id&&id!==PP.id){PP.id=id;if(!PP.keep)PP.tab='pubs'}PP.keep=0;
+  if(id&&id!==PP.id){PP.id=id;PP.tab='pubs'}
   const p=await GET('/api/pros/'+PP.id);CACHE.set(p.id,p);
   const svc=p.services.slice().sort((a,b)=>a.p-b.p)[0],today=new Date().getDay(),at=(ATEND.find(x=>x[0]===p.atend)||[])[1]||'';
-  const tabs=[['pubs','Fotos e posts'],['sobre','Sobre mim'],['aval','Avaliações']];
+  const tabs=[['pubs','Publicações'],['sobre','Sobre'],['aval','Avaliações']];
   const last=(p.reviewList||[])[0],tot=p.reviews||0,dist=p.dist||{};
   let body='';
   if(PP.tab==='pubs'){
-    body=`<h2 class="pp-h pp-gh">${ic('camera')}<span>Galeria de fotos</span></h2>${p.gallery.length?`<div class="gal ro">${p.gallery.map(u=>`<div><img src="${esc(u)}" alt="Trabalho de ${esc(p.name)}" loading="lazy"></div>`).join('')}</div>`:`<p class="pp-empty">${ic('info')}<span>Perfil <b>não possui</b> fotos na sua galeria!</span></p>`}
+    body=`${p.gallery.length?`<h2 class="pp-h">${ic('camera')}Galeria de fotos</h2><div class="gal ro">${p.gallery.map(u=>`<div><img src="${esc(u)}" alt="Trabalho de ${esc(p.name)}" loading="lazy"></div>`).join('')}</div>`:''}
      <h2 class="pp-h">Publicações</h2>${p.posts.length?`<div class="posts">${p.posts.map(x=>postCard(x,p)).join('')}</div>`:`<div class="empty-state">${p.own?'Você ainda não publicou. Crie sua primeira publicação em Meu perfil.':'Esta profissional ainda não fez publicações.'}</div>`}`;
   }
   if(PP.tab==='sobre'){
@@ -36,48 +36,18 @@ async function proPage(id){
      ${list.length?`<h3 class="pp-h2">Mais recentes</h3><div class="stack">${list.map(r=>`<div class="pp-rev"><div class="av">${esc(initials(r.autor))}</div><div><b>${esc(r.autor)}</b><small>${ago(r.at)}</small><div class="rate">${r.nota} ${ic('star','fill')} ${NOTA_L[r.nota]||''}</div>${r.texto?`<p>${esc(r.texto)}</p>`:''}</div></div>`).join('')}</div>`:''}`;
   }
   const ext=(h,l)=>`<a class="btn ghost" href="${esc(h)}" target="_blank" rel="noopener noreferrer">${l}</a>`;
-  const fav=S.favs.includes(p.id),hs=p.hours||{open:false},tag=String(p.bio||'').replace(/\s+/g,' ').trim().slice(0,70)||p.role;
-  const loc=[p.hood,p.city].filter(Boolean).join(' · ');
-  const revs=(p.reviewList||[]).slice(0,10);
-  const main=p.agenda?`<a class="pp-cta" href="${esc(p.agenda)}" target="_blank" rel="noopener noreferrer">${ic('cal')}Ver agenda online</a>`
-   :p.wa?`<a class="pp-cta" href="https://wa.me/${esc(p.wa)}" target="_blank" rel="noopener noreferrer">${ic('chat')}Chamar no WhatsApp</a>`
-   :(!p.own?`<button class="pp-cta" data-msg="${p.acc}">${ic('chat')}Enviar mensagem</button>`:'');
-  const subs=[p.role,p.anos&&'Experiência: '+p.anos].filter(Boolean);
   app().innerHTML=header('profissional',{nobar:true})+`<main class="wrap pp">
-   <div class="pp-cover"><span class="wm">BH</span>
-    <div class="pp-ctl"><button class="pp-rb" data-back aria-label="Voltar">${ic('back')}</button><span class="sp"></span>
-     <button class="pp-rb" data-share aria-label="Compartilhar perfil">${ic('share')}</button>
-     <button class="pp-rb fv ${fav?'on':''}" data-fav="${p.id}" aria-pressed="${fav}" aria-label="${fav?'Remover dos favoritos':'Salvar nos favoritos'}">${ic('heart')}</button></div></div>
-   <div class="pp-id2"><div class="pp-avw">${avatarHTML(p.photo,p.name,'xl')}<i class="dot ${hs.open?'on':''}" title="${hs.open?'Atendendo agora':'Fora do expediente'}"></i></div>
-    <div class="pp-bub"><span>${esc(tag)}</span></div>
-    <h1>${esc(p.name)}</h1>
-    <div class="pp-sub">${subs.map(t=>`<span>${esc(t)}</span>`).join('<i>•</i>')}<i>•</i><span class="fl">${ic('users')}${p.followers||0}</span></div>
-    ${p.verified?`<span class="pp-ver">Documentos verificados ${ic('info')}</span>`:''}</div>
-   ${tot?`<div class="pp-rec"><div class="pp-rec-h"><span>Avaliações recentes</span><button class="rate" data-pptab="aval">${ic('star','fill')} ${rateTxt(p)} <span>(${tot})</span></button></div>
-     <div class="pp-hs">${revs.map(r=>`<button class="pp-mini" data-pptab="aval"><b>${ic('star','fill')}${r.nota.toFixed(1).replace('.',',')} <small>${ago(r.at)}</small></b><span>${esc((r.texto||NOTA_L[r.nota]||'').slice(0,40))}</span></button>`).join('')}</div></div>`:''}
-   ${p.ig?`<a class="pp-news" href="https://instagram.com/${esc(p.ig)}" target="_blank" rel="noopener noreferrer">${ic('ig')}Novidades no Instagram</a>`:''}
-   <div class="pp-info">
-    <button class="pp-box pp-fold" data-fold aria-expanded="false"><span class="h">${ic('tag')}Valores${ic('chevd')}</span><small>a partir de</small><b class="pr">${svc?brl0(svc.p):'—'} ${svc?`<em>(${durTxt(svc.d)})</em>`:''}</b>
-     <span class="more">${p.services.map(s=>`<span class="ln"><span>${esc(s.n.replace('Extensão de cílios – ',''))}</span><b>${brl0(s.p)}</b></span>`).join('')}</span>
-     ${p.pagto&&p.pagto.length?`<span class="sm">Pagamento: ${esc(p.pagto.join(', '))}</span>`:''}</button>
-    <button class="pp-box pp-fold" data-fold aria-expanded="false"><span class="h">${ic('pin')}Localização${ic('chevd')}</span><b>${esc(p.hood||p.city)}</b><span class="sm">${esc(p.hood?p.city:'')}</span><span class="sm">${esc(at)}</span>
-     <span class="more"><span class="sm">${esc(loc)}</span>${p.atend!=='estudio'?`<span class="sm">Atende até ${p.raio} km de distância</span>`:''}</span></button></div>
-   ${main}
-   <div class="row-actions pp-act">${p.own?'':`<button class="btn ghost" data-msg="${p.acc}">${ic('chat')}Mensagem</button>`}${p.wa&&p.agenda?ext('https://wa.me/'+p.wa,ic('chat')+'WhatsApp'):''}${favBtn(p.id)}</div>
+   <div class="pp-cover"></div>
+   <div class="pp-id">${avatarHTML(p.photo,p.name,'xl')}<div><h1>${esc(p.name)}</h1><small>${esc(p.role)} · ${esc(p.city)}</small>${p.verified?`<span class="pp-ver">${ic('shield')}Perfil verificado</span>`:''}</div></div>
+   ${tot?`<div class="pp-rec"><div class="pp-rec-h"><span>Avaliações recentes</span><span class="rate">${ic('star','fill')} ${rateTxt(p)} <span>(${tot})</span></span></div>
+     <div class="pp-rec-b">${last?`<div class="pp-mini"><b>${last.nota} ★ · ${ago(last.at)}</b><span>${esc((last.texto||NOTA_L[last.nota]||'').slice(0,60))}</span></div>`:''}<button class="btn ghost" data-pptab="aval">Ler avaliações</button></div></div>`:''}
+   <div class="pp-info"><div class="pp-box"><small>${ic('tag')} Valores</small><span>a partir de</span><b class="pr">${svc?brl0(svc.p):'—'}</b><span>${svc?durTxt(svc.d):''}</span></div>
+    <div class="pp-box"><small>${ic('pin')} Localização</small><b>${esc(p.city)}</b><span>${esc(at)}</span></div></div>
+   <div class="row-actions">${p.own?'':`<button class="btn ghost" data-msg="${p.acc}">${ic('chat')}Mensagem</button>`}${p.wa?ext('https://wa.me/'+p.wa,ic('chat')+'WhatsApp'):''}${p.ig?ext('https://instagram.com/'+p.ig,'Instagram'):''}${p.agenda?ext(p.agenda,ic('cal')+'Agenda online'):''}${favBtn(p.id)}</div>
    <div class="tabs pp-tabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" aria-selected="${PP.tab===k}" data-pptab="${k}">${l}${k==='aval'&&tot?`<small>(${tot})</small>`:''}</button>`).join('')}</div>
    ${body}</main>
    <div class="pp-bar"><div><small>a partir de</small><b>${svc?brl0(svc.p):'—'}</b>${svc?`<small>(${durTxt(svc.d)})</small>`:''}</div>${p.own?`<button class="btn" data-go="meu-perfil">Gerenciar perfil</button>`:`<button class="btn" data-xbook="${p.id}">Solicitar horário</button>`}</div>`;
 }
-document.addEventListener('click',e=>{
-  const t=e.target,f=t.closest('[data-fold]');
-  if(f){const o=f.getAttribute('aria-expanded')!=='true';f.setAttribute('aria-expanded',o);return}
-  if(t.closest('[data-share]')){
-    const u=location.href,n=(CACHE.get(PP.id)||{}).name||'Beauty Hub';
-    if(navigator.share){navigator.share({title:n+' | Beauty Hub',url:u}).catch(()=>{})}
-    else if(navigator.clipboard){navigator.clipboard.writeText(u).then(()=>toast('Link copiado'),()=>toast(u))}
-    else toast(u);
-  }
-});
 
 /* ----- publicações (no Meu perfil) ----- */
 function resizeImg(file,max){return new Promise((res,rej)=>{

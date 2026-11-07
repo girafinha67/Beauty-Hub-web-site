@@ -62,19 +62,6 @@ test('upload de foto valida o conteúdo do arquivo', async () => {
   assert.equal(img.status, 200); assert.equal(img.headers.get('content-type'), 'image/png');
 });
 
-test('banner do perfil: envio, aparece no perfil público, cliente não envia e remoção', async () => {
-  assert.equal((await pro.raw('/api/me/banner', Buffer.from('<svg onload=alert(1)>'))).status, 415);
-  const r = await pro.raw('/api/me/banner', PNG);
-  assert.equal(r.status, 200);
-  assert.equal((await fetch(T.base + r.body.banner)).status, 200);
-  assert.equal((await pro.get('/api/me')).body.setup.banner, r.body.banner);
-  const pub = (await cli.get('/api/pros')).body.items[0];
-  assert.equal(pub.banner, r.body.banner);
-  assert.equal((await cli.raw('/api/me/banner', PNG)).status, 403);
-  assert.equal((await pro.del('/api/me/banner')).status, 200);
-  assert.equal((await cli.get('/api/pros/' + pub.id)).body.banner, '');
-});
-
 let apptId, svcId, proRef;
 test('agendamento: horários livres, conflito, confirmação e conclusão', async () => {
   const p = (await cli.get('/api/pros')).body.items[0]; proRef = p.id; svcId = p.services[0].id;

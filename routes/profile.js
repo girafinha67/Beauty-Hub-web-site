@@ -106,7 +106,6 @@ R.post('/api/me/photo', { auth: true, raw: true }, ctx => {
   return { photo: url };
 });
 
-/* banner do perfil público (só perfis profissionais) */
 R.post('/api/me/banner', { auth: true, raw: true }, ctx => {
   if (!D.isProAcc(ctx.account)) throw new HttpError(403, 'O banner é para perfis profissionais.');
   const url = D.saveImage(ctx.body);
@@ -117,12 +116,10 @@ R.post('/api/me/banner', { auth: true, raw: true }, ctx => {
   return { banner: url };
 });
 R.delete('/api/me/banner', { auth: true }, ctx => {
-  const row = D.one('SELECT banner FROM setups WHERE account_id=?', ctx.account.id);
-  if (row && row.banner) {
-    D.run("UPDATE setups SET banner='' WHERE account_id=?", ctx.account.id);
-    D.removeImage(row.banner);
-  }
-  return { ok: true };
+  const old = (D.one('SELECT banner FROM setups WHERE account_id=?', ctx.account.id) || {}).banner;
+  D.run("UPDATE setups SET banner='' WHERE account_id=?", ctx.account.id);
+  D.removeImage(old);
+  return { banner: '' };
 });
 
 function galleryLimit(accId) {

@@ -42,7 +42,21 @@ async function API(method,url,body,raw){
   catch(e){throw new ApiError(0,'Sem conexão com o servidor. Verifique sua internet e tente de novo.')}
   let j=null;try{j=await r.json()}catch(e){}
   if(!r.ok){
-    if(r.status===401&&S.acc&&!url.startsWith('/api/auth/')){S.acc=null;S.setup=null;S.reg=null;try{toast('Sua sessão expirou. Entre de novo.')}catch(e){}go('entrar')}
+    /* Um 401 isolado não derruba a conta: antes de sair, confere com o servidor se a sessão realmente acabou. */
+    if(r.status===401&&S.acc&&!url.startsWith('/api/auth/')){
+      let gone=false;
+      for(let i=0;i<2&&!gone;i++){
+        try{const m=await fetch('/api/me',{credentials:'same-origin',headers:{'X-BH':'1'},cache:'no-store'});const mj=await m.json();
+          if(mj&&mj.account){gone=false;break}gone=i===1}catch(e){gone=false;break}
+        if(!gone)await new Promise(z=>setTimeout(z,350));
+      }
+      if(gone){S.acc=null;S.setup=null;S.reg=null;try{toast('Sua sessão terminou. Entre novamente para continuar.')}catch(e){}go('entrar')}
+      else throw new ApiError(503,'Não consegui concluir agora. Tente de novo em instantes.');
+    }
+    /* Perfil que aparece na lista mas ainda não respondeu: tenta mais uma vez antes de mostrar erro. */
+    if(r.status===404&&method==='GET'&&/^\/api\/pros\/p\d+$/.test(url)&&!API._retry){
+      API._retry=true;try{await new Promise(z=>setTimeout(z,400));return await API(method,url,body,raw)}finally{API._retry=false}
+    }
     throw new ApiError(r.status,(j&&j.error)||'Algo deu errado. Tente de novo.',j&&j.fields);
   }
   return j;
@@ -465,9 +479,7 @@ async function meuPerfil(){
   if(PT==='avaliacoes')body=x.avaliacoes?(rev.length?`<div class="stack">${rev.map(r=>`<div class="row-card" style="align-items:flex-start"><div class="av">${esc(initials(r.autor))}</div><div><b>${esc(r.autor)}</b> <span class="rate">${ic('star','fill')} ${r.nota}</span> <small>${ago(r.at)}</small>${r.texto?`<p style="margin:2px 0 0">${esc(r.texto)}</p>`:''}</div></div>`).join('')}</div>`:`<div class="empty-state">Ainda sem avaliações. Clientes avaliam depois de um atendimento concluído.</div>`):`<p class="locked">${ic('lock')}Avaliações de clientes estão disponíveis a partir do plano ${esc((firstWith('avaliacoes')||{}).name||'superior')}, com o plano ativo.</p>`;
   if(PT==='fotos'){
     const g=st.gallery||[],max=x.galeria?20:3;
-    const bn=st.banner||'';
-    const bannerBox=`<h3 class="bn-h">Banner do perfil</h3><div class="bn-edit${bn?' has-img':''}">${bn?`<img src="${esc(bn)}" alt="Seu banner atual">`:`<span>${ic('camera')}Sem banner. Seu perfil usa o degradê padrão.</span>`}</div><div class="row-actions"><label class="btn sm ghost bn-pick">${ic('camera')}${bn?'Trocar banner':'Adicionar banner'}<input type="file" accept="image/jpeg,image/png,image/webp" data-bnadd hidden></label>${bn?`<button class="btn sm ghost" data-delbanner>${ic('trash')}Remover</button>`:''}</div><p class="bn-tip">Dica: use uma foto horizontal (ideal 1600 × 640 px). Ela aparece atrás da sua foto de perfil, no topo da sua página.</p><h3 class="bn-h">Galeria de trabalhos</h3>`;
-    body=bannerBox+`<div class="gal">${g.map(p=>`<div><img src="${esc(p.url)}" alt="Foto do trabalho" loading="lazy"><button class="gdel" data-delphoto="${p.id}" aria-label="Remover foto">${ic('trash')}</button></div>`).join('')}${g.length<max?`<label class="gal-add">${ic('camera')}<span>Adicionar foto</span><input type="file" accept="image/jpeg,image/png,image/webp" data-galadd hidden></label>`:''}</div><p style="color:var(--muted);font-size:13px">${g.length} de ${max} fotos. ${x.galeria?'Galeria ampliada do seu plano.':'Planos com galeria liberam mais fotos.'}</p>`;
+    body=`<div class="gal">${g.map(p=>`<div><img src="${esc(p.url)}" alt="Foto do trabalho" loading="lazy"><button class="gdel" data-delphoto="${p.id}" aria-label="Remover foto">${ic('trash')}</button></div>`).join('')}${g.length<max?`<label class="gal-add">${ic('camera')}<span>Adicionar foto</span><input type="file" accept="image/jpeg,image/png,image/webp" data-galadd hidden></label>`:''}</div><p style="color:var(--muted);font-size:13px">${g.length} de ${max} fotos. ${x.galeria?'Galeria ampliada do seu plano.':'Planos com galeria liberam mais fotos.'}</p>`;
   }
   if(PT==='publicacoes')body=postsTab(myposts);
   if(PT==='local')body=st.cidade?`<p>${esc([st.rua&&(st.rua+', '+st.num),st.bairro].filter(Boolean).join(' · '))}</p><p>${esc(st.cidade)} - ${esc(st.uf)}</p><div class="row-actions"><button class="btn sm ghost" data-go="configurar-perfil">Editar endereço</button></div>`:'<p>Informe seu endereço em “Editar perfil”.</p>';
@@ -727,11 +739,17 @@ function xsel(k,label,opts,o={}){
  return `<div class="xf ${o.cls||''}"><label for="${id}">${label}${o.req?' *':''}</label><select id="${id}" data-px="${k}" class="${PE[k]?'bad':''}"><option value="">${o.ph||'Selecione'}</option>${opts.map(x=>`<option ${String(x)===String(v)?'selected':''}>${esc(x)}</option>`).join('')}</select>${xerr(k)}</div>`;
 }
 const chips=(arr,sel,attr)=>`<div class="xchips">${arr.map(([v,l])=>`<button type="button" class="xchip" ${attr}="${esc(v)}" aria-pressed="${sel.includes(v)}">${esc(l)}</button>`).join('')}</div>`;
+const isSN=v=>/^s\/?n$/i.test(String(v||'').trim());
+function numField(key,tg){
+ const sn=isSN(gp(P,key)),id='x-'+key.replace('.','-');
+ const f=xf(key,'Número',{ph:'Número',req:1,mode:'numeric'});
+ return (sn?f.replace(`id="${id}"`,`id="${id}" disabled`):f)+`<label class="xck xsn"><input type="checkbox" data-xsn="${tg}" ${sn?'checked':''}><span>Sem número (S/N)</span></label>`;
+}
 function addrBlock(t){
  const k=s=>t?t+'.'+s:s,tg=t||'main';
  return `<button type="button" class="xloc" data-xloc="${tg}">${ic('locate')}Usar minha localização atual</button>
  <div class="xf"><div class="xsearch">${ic('search')}<input type="search" data-xbusca="${tg}" placeholder="Buscar endereço" autocomplete="off" aria-label="Buscar endereço"></div><div class="xsug" id="x-sug-${tg}"></div></div>
- ${xf(k('rua'),'Rua/Avenida',{ph:'Rua/Avenida',req:1,auto:'street-address'})}${xf(k('num'),'Número',{ph:'Número',req:1,mode:'numeric'})}${xf(k('bairro'),'Bairro')}
+ ${xf(k('rua'),'Rua/Avenida',{ph:'Rua/Avenida',req:1,auto:'street-address'})}${numField(k('num'),tg)}${xf(k('bairro'),'Bairro')}
  <div class="xrow">${xf(k('cidade'),'Cidade',{req:1,cls:'g'})}${xsel(k('uf'),'UF',UFS,{req:1,ph:'UF',cls:'uf'})}</div>${xf(k('cep'),'CEP',{ph:'00000-000',mode:'numeric'})}`;
 }
 function svcCard(s,i){
@@ -770,7 +788,7 @@ function setupPage(keep,focusNum){
  const a=myAcc()||{},pro=isPro(a),edit=!needSetup();
  const sub=edit?'Atualize seus dados quando quiser.':pro?'Precisamos de mais alguns dados para publicar o seu perfil profissional.':'Precisamos de mais alguns dados para liberar o app.';
  app().innerHTML=header('configurar-perfil',{nobar:true})+hero({title:edit?'Editar perfil':'Complete seu cadastro',sub})+`<main class="wrap">
-  <div class="ap-who"><label class="ap-photo" for="x-photo">${avatarHTML(P.photo,'','xl')}<span class="cam">${ic('camera')}</span><input id="x-photo" type="file" accept="image/*" hidden></label>
+  <div class="ap-who ${pro?'hasb':''}">${pro?`<label class="ap-banner" for="x-banner" ${P.banner?`style="background-image:url('${esc(P.banner)}')"`:''}><span class="bcam">${ic('camera')}${P.banner?'Editar banner':'Adicionar banner'}</span><input id="x-banner" type="file" accept="image/*" hidden></label>`:''}<label class="ap-photo" for="x-photo">${avatarHTML(P.photo,'','xl')}<span class="cam">${ic('camera')}</span><input id="x-photo" type="file" accept="image/*" hidden></label>
    <b>${esc(a.nome||'')}</b><span class="pill">${ic(pro?'eyel':'user')}${pro?'Profissional':'Cliente'}</span><small>${esc(a.doc||'')}</small></div>
   <div class="xform"><section class="xsec"><h2>Endereço</h2><p class="xd">Ative sua localização ou busque seu endereço, depois confirme o número.</p>${addrBlock('')}</section>
   ${pro?proSections():`<section class="xsec"><h2>Estilos que você gosta</h2><p class="xd">Opcional. Ajuda a encontrar profissionais para o seu tipo de olhar.</p>${chips(PREFS.map(x=>[x,x]),P.pref,'data-xpref')}</section>`}</div>
@@ -820,9 +838,19 @@ function readPhoto(f){
   im.onerror=()=>toast('Não consegui abrir essa imagem');im.src=r.result};
  r.readAsDataURL(f);
 }
+function readBanner(f){
+ if(!f)return;if(!/^image\//.test(f.type)){toast('Escolha uma imagem');return}
+ const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{
+  const W=1600,H=640,c=document.createElement('canvas');c.width=W;c.height=H;
+  const sc=Math.max(W/im.width,H/im.height),w=im.width*sc,h=im.height*sc;
+  c.getContext('2d').drawImage(im,(W-w)/2,(H-h)/2,w,h);
+  c.toBlob(b=>act(async()=>{const r=await API('POST','/api/me/banner',b,true);P.banner=r.banner;if(S.setup)S.setup.banner=r.banner;setupPage(true);toast('Banner atualizado')}),'image/jpeg',.85)};
+  im.onerror=()=>toast('Não consegui abrir essa imagem');im.src=r.result};
+ r.readAsDataURL(f);
+}
 function addrErrors(o,pre,E,nomeLocal){
  if(!o.rua.trim())E[pre+'rua']='Informe a rua ou avenida.';
- if(!o.num.trim())E[pre+'num']='Informe o número (ou S/N).';
+ if(!o.num.trim())E[pre+'num']='Informe o número ou marque “Sem número”.';
  if(!o.cidade.trim())E[pre+'cidade']='Informe a cidade.';
  if(!o.uf)E[pre+'uf']='Escolha a UF.';
  if(o.cep&&digits(o.cep).length!==8)E[pre+'cep']='O CEP tem 8 números.';
@@ -1109,6 +1137,8 @@ document.addEventListener('input',e=>{
 document.addEventListener('change',e=>{
  const t=e.target,d=t.dataset||{};
  if(t.id==='x-photo'){readPhoto(t.files[0]);return}
+ if(t.id==='x-banner'){readBanner(t.files[0]);return}
+ if(d.xsn!==undefined){const o=d.xsn==='w'?P.w:P,pre=d.xsn==='w'?'w.':'';o.num=t.checked?'S/N':'';delete PE[pre+'num'];setupPage(true);return}
  if(t.id==='b-svc'||t.id==='b-dt'){refreshSlots();return}
  if(d.xver!==undefined){H.ver=t.checked;homePage();return}
  if(d.xsvc){const [i,f]=d.xsvc.split(':');P.services[+i][f]=t.value;return}
@@ -1155,7 +1185,7 @@ async function proPage(id){
   }
   const ext=(h,l)=>`<a class="btn ghost" href="${esc(h)}" target="_blank" rel="noopener noreferrer">${l}</a>`;
   app().innerHTML=header('profissional',{nobar:true})+`<main class="wrap pp">
-   <div class="pp-cover${p.banner?' has-img':''}">${p.banner?`<img src="${esc(p.banner)}" alt="Banner de ${esc(p.name)}">`:''}</div>
+   <div class="pp-cover" ${p.banner?`style="background-image:url('${esc(p.banner)}')"`:''}></div>
    <div class="pp-id">${avatarHTML(p.photo,p.name,'xl')}<div><h1>${esc(p.name)}</h1><small>${esc(p.role)} · ${esc(p.city)}</small>${p.verified?`<span class="pp-ver">${ic('shield')}Perfil verificado</span>`:''}</div></div>
    ${tot?`<div class="pp-rec"><div class="pp-rec-h"><span>Avaliações recentes</span><span class="rate">${ic('star','fill')} ${rateTxt(p)} <span>(${tot})</span></span></div>
      <div class="pp-rec-b">${last?`<div class="pp-mini"><b>${last.nota} ★ · ${ago(last.at)}</b><span>${esc((last.texto||NOTA_L[last.nota]||'').slice(0,60))}</span></div>`:''}<button class="btn ghost" data-pptab="aval">Ler avaliações</button></div></div>`:''}
@@ -1326,7 +1356,6 @@ document.addEventListener('click',e=>{
   if(t.closest('[data-sfinish]')){finishSignup();return}
   /* perfil */
   if(el=t.closest('[data-ptab]')){PT=el.dataset.ptab;meuPerfil();return}
-  if(t.closest('[data-delbanner]')){act(async()=>{await DEL('/api/me/banner');await loadMe();toast('Banner removido');meuPerfil()});return}
   if(el=t.closest('[data-delphoto]')){act(async()=>{await DEL('/api/me/gallery/'+el.dataset.delphoto);await loadMe();toast('Foto removida');meuPerfil()});return}
   if(t.closest('[data-delete-profile]')){const b=t.closest('[data-delete-profile]');if(b.dataset.sure){act(async()=>{await POST('/api/registration/delete');await loadMe();D=newDraft();toast('Cadastro excluído');meuPerfil()})}else{b.dataset.sure='1';b.textContent='Toque de novo para confirmar a exclusão'}return}
   if(t.closest('[data-delaccount]')){openSheet(`${closeBtn}<div class="body"><h2>Excluir minha conta</h2><p style="margin:0;color:var(--muted)">Isso apaga seus dados, agendamentos, mensagens e anúncios, e não pode ser desfeito. Confirme com a sua senha.</p><form class="form" id="delete-form" novalidate><div class="f"><label for="dl-s">Senha</label><input id="dl-s" type="password" autocomplete="current-password"></div><div class="err" id="dl-err" role="alert" style="color:var(--bad);font-size:13px"></div><button class="btn" type="submit">Excluir definitivamente</button></form></div>`);return}
@@ -1353,17 +1382,6 @@ document.addEventListener('change',e=>{
     const k=d.pplan,box=t.closest('[data-plan-panel]'),perms={proc:parseInt($('#pc-'+k).value,10)};
     $$('[data-pperm]',box).forEach(c=>perms[c.dataset.pperm]=c.checked);
     act(async()=>{const r=await PUT('/api/admin/plans/'+k,{price:parseFloat($('#pp-'+k).value),perms});S.plans=r.plans;toast('Plano atualizado')});
-    return;
-  }
-  if(t.type==='file'&&d.bnadd!==undefined){
-    const f=t.files[0];if(!f)return;if(!/^image\//.test(f.type)){toast('Escolha uma imagem');return}
-    const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{
-      /* recorta no formato do banner (5:2), mantendo o centro da foto */
-      const W=1600,H=640,c=document.createElement('canvas');c.width=W;c.height=H;
-      const k=Math.max(W/im.width,H/im.height),sw=W/k,sh=H/k;
-      c.getContext('2d').drawImage(im,(im.width-sw)/2,(im.height-sh)/2,sw,sh,0,0,W,H);
-      c.toBlob(b=>act(async()=>{await API('POST','/api/me/banner',b,true);await loadMe();toast('Banner atualizado');meuPerfil()}),'image/jpeg',.86)};
-      im.onerror=()=>toast('Não consegui abrir essa imagem');im.src=r.result};r.readAsDataURL(f);t.value='';
     return;
   }
   if(t.type==='file'&&d.galadd!==undefined){

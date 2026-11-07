@@ -60,11 +60,17 @@ function xsel(k,label,opts,o={}){
  return `<div class="xf ${o.cls||''}"><label for="${id}">${label}${o.req?' *':''}</label><select id="${id}" data-px="${k}" class="${PE[k]?'bad':''}"><option value="">${o.ph||'Selecione'}</option>${opts.map(x=>`<option ${String(x)===String(v)?'selected':''}>${esc(x)}</option>`).join('')}</select>${xerr(k)}</div>`;
 }
 const chips=(arr,sel,attr)=>`<div class="xchips">${arr.map(([v,l])=>`<button type="button" class="xchip" ${attr}="${esc(v)}" aria-pressed="${sel.includes(v)}">${esc(l)}</button>`).join('')}</div>`;
+const isSN=v=>/^s\/?n$/i.test(String(v||'').trim());
+function numField(key,tg){
+ const sn=isSN(gp(P,key)),id='x-'+key.replace('.','-');
+ const f=xf(key,'Número',{ph:'Número',req:1,mode:'numeric'});
+ return (sn?f.replace(`id="${id}"`,`id="${id}" disabled`):f)+`<label class="xck xsn"><input type="checkbox" data-xsn="${tg}" ${sn?'checked':''}><span>Sem número (S/N)</span></label>`;
+}
 function addrBlock(t){
  const k=s=>t?t+'.'+s:s,tg=t||'main';
  return `<button type="button" class="xloc" data-xloc="${tg}">${ic('locate')}Usar minha localização atual</button>
  <div class="xf"><div class="xsearch">${ic('search')}<input type="search" data-xbusca="${tg}" placeholder="Buscar endereço" autocomplete="off" aria-label="Buscar endereço"></div><div class="xsug" id="x-sug-${tg}"></div></div>
- ${xf(k('rua'),'Rua/Avenida',{ph:'Rua/Avenida',req:1,auto:'street-address'})}${xf(k('num'),'Número',{ph:'Número',req:1,mode:'numeric'})}${xf(k('bairro'),'Bairro')}
+ ${xf(k('rua'),'Rua/Avenida',{ph:'Rua/Avenida',req:1,auto:'street-address'})}${numField(k('num'),tg)}${xf(k('bairro'),'Bairro')}
  <div class="xrow">${xf(k('cidade'),'Cidade',{req:1,cls:'g'})}${xsel(k('uf'),'UF',UFS,{req:1,ph:'UF',cls:'uf'})}</div>${xf(k('cep'),'CEP',{ph:'00000-000',mode:'numeric'})}`;
 }
 function svcCard(s,i){
@@ -103,7 +109,7 @@ function setupPage(keep,focusNum){
  const a=myAcc()||{},pro=isPro(a),edit=!needSetup();
  const sub=edit?'Atualize seus dados quando quiser.':pro?'Precisamos de mais alguns dados para publicar o seu perfil profissional.':'Precisamos de mais alguns dados para liberar o app.';
  app().innerHTML=header('configurar-perfil',{nobar:true})+hero({title:edit?'Editar perfil':'Complete seu cadastro',sub})+`<main class="wrap">
-  <div class="ap-who"><label class="ap-photo" for="x-photo">${avatarHTML(P.photo,'','xl')}<span class="cam">${ic('camera')}</span><input id="x-photo" type="file" accept="image/*" hidden></label>
+  <div class="ap-who ${pro?'hasb':''}">${pro?`<label class="ap-banner" for="x-banner" ${P.banner?`style="background-image:url('${esc(P.banner)}')"`:''}><span class="bcam">${ic('camera')}${P.banner?'Editar banner':'Adicionar banner'}</span><input id="x-banner" type="file" accept="image/*" hidden></label>`:''}<label class="ap-photo" for="x-photo">${avatarHTML(P.photo,'','xl')}<span class="cam">${ic('camera')}</span><input id="x-photo" type="file" accept="image/*" hidden></label>
    <b>${esc(a.nome||'')}</b><span class="pill">${ic(pro?'eyel':'user')}${pro?'Profissional':'Cliente'}</span><small>${esc(a.doc||'')}</small></div>
   <div class="xform"><section class="xsec"><h2>Endereço</h2><p class="xd">Ative sua localização ou busque seu endereço, depois confirme o número.</p>${addrBlock('')}</section>
   ${pro?proSections():`<section class="xsec"><h2>Estilos que você gosta</h2><p class="xd">Opcional. Ajuda a encontrar profissionais para o seu tipo de olhar.</p>${chips(PREFS.map(x=>[x,x]),P.pref,'data-xpref')}</section>`}</div>
@@ -153,9 +159,19 @@ function readPhoto(f){
   im.onerror=()=>toast('Não consegui abrir essa imagem');im.src=r.result};
  r.readAsDataURL(f);
 }
+function readBanner(f){
+ if(!f)return;if(!/^image\//.test(f.type)){toast('Escolha uma imagem');return}
+ const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{
+  const W=1600,H=640,c=document.createElement('canvas');c.width=W;c.height=H;
+  const sc=Math.max(W/im.width,H/im.height),w=im.width*sc,h=im.height*sc;
+  c.getContext('2d').drawImage(im,(W-w)/2,(H-h)/2,w,h);
+  c.toBlob(b=>act(async()=>{const r=await API('POST','/api/me/banner',b,true);P.banner=r.banner;if(S.setup)S.setup.banner=r.banner;setupPage(true);toast('Banner atualizado')}),'image/jpeg',.85)};
+  im.onerror=()=>toast('Não consegui abrir essa imagem');im.src=r.result};
+ r.readAsDataURL(f);
+}
 function addrErrors(o,pre,E,nomeLocal){
  if(!o.rua.trim())E[pre+'rua']='Informe a rua ou avenida.';
- if(!o.num.trim())E[pre+'num']='Informe o número (ou S/N).';
+ if(!o.num.trim())E[pre+'num']='Informe o número ou marque “Sem número”.';
  if(!o.cidade.trim())E[pre+'cidade']='Informe a cidade.';
  if(!o.uf)E[pre+'uf']='Escolha a UF.';
  if(o.cep&&digits(o.cep).length!==8)E[pre+'cep']='O CEP tem 8 números.';
@@ -442,6 +458,8 @@ document.addEventListener('input',e=>{
 document.addEventListener('change',e=>{
  const t=e.target,d=t.dataset||{};
  if(t.id==='x-photo'){readPhoto(t.files[0]);return}
+ if(t.id==='x-banner'){readBanner(t.files[0]);return}
+ if(d.xsn!==undefined){const o=d.xsn==='w'?P.w:P,pre=d.xsn==='w'?'w.':'';o.num=t.checked?'S/N':'';delete PE[pre+'num'];setupPage(true);return}
  if(t.id==='b-svc'||t.id==='b-dt'){refreshSlots();return}
  if(d.xver!==undefined){H.ver=t.checked;homePage();return}
  if(d.xsvc){const [i,f]=d.xsvc.split(':');P.services[+i][f]=t.value;return}

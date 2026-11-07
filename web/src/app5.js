@@ -36,7 +36,8 @@ const brl0=n=>'R$ '+Number(n).toLocaleString('pt-BR',{minimumFractionDigits:n%1?
 
 /* ----- peças visuais ----- */
 const logoRow=()=>`<div class="ap-logo">${logoMark(true)}<b>Beauty Hub</b></div>`;
-function avatarHTML(photo,name,cls=''){return `<div class="ap-av ${cls}">${photo?`<img src="${esc(photo)}" alt="">`:(name?`<span>${esc(initials(name))}</span>`:ic('user'))}</div>`}
+document.addEventListener('error',e=>{const t=e.target;if(t&&t.tagName==='IMG'&&t.parentNode&&t.parentNode.classList&&t.parentNode.classList.contains('ap-av')){t.parentNode.innerHTML=ic('user')}},true);
+function avatarHTML(photo,name,cls=''){return `<div class="ap-av ${cls}">${photo?`<img src="${esc(photo)}" alt="" decoding="async">`:(name?`<span>${esc(initials(name))}</span>`:ic('user'))}</div>`}
 function tabbar(cur){
  const T=[['home','home','Home'],['agendamentos','cal','Agendamentos'],['mensagens','chat','Mensagens'],['perfil','user','Perfil']];
  return `<nav class="tabbar" aria-label="Principal">${T.map(([r,i,l])=>`<button data-go="${r}" ${cur===r?'aria-current="page"':''}>${ic(i)}<span>${l}</span>${r==='mensagens'&&S.counts.msgs?`<em class="cnt">${S.counts.msgs}</em>`:''}</button>`).join('')}</nav>`;
@@ -154,7 +155,7 @@ function readPhoto(f){
  if(!f)return;if(!/^image\//.test(f.type)){toast('Escolha uma imagem');return}
  const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{
   const s=640,c=document.createElement('canvas');c.width=c.height=s;const m=Math.min(im.width,im.height);
-  c.getContext('2d').drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,s,s);
+  const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,s,s);g.drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,s,s);
   c.toBlob(b=>act(async()=>{const r=await API('POST','/api/me/photo',b,true);P.photo=r.photo;if(S.setup)S.setup.photo=r.photo;setupPage(true);toast('Foto atualizada')}),'image/jpeg',.85)};
   im.onerror=()=>toast('Não consegui abrir essa imagem');im.src=r.result};
  r.readAsDataURL(f);
@@ -164,8 +165,8 @@ function readBanner(f){
  const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{
   const W=1600,H=640,c=document.createElement('canvas');c.width=W;c.height=H;
   const sc=Math.max(W/im.width,H/im.height),w=im.width*sc,h=im.height*sc;
-  c.getContext('2d').drawImage(im,(W-w)/2,(H-h)/2,w,h);
-  c.toBlob(b=>act(async()=>{const r=await API('POST','/api/me/banner',b,true);P.banner=r.banner;if(S.setup)S.setup.banner=r.banner;setupPage(true);toast('Banner atualizado')}),'image/jpeg',.85)};
+  const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,W,H);g.drawImage(im,(W-w)/2,(H-h)/2,w,h);
+  c.toBlob(b=>act(async()=>{const r=await API('POST','/api/me/banner',b,true);if(P)P.banner=r.banner;if(S.setup)S.setup.banner=r.banner;if(CUR==='profissional'){await proPage()}else{setupPage(true)}toast('Banner atualizado')}),'image/jpeg',.85)};
   im.onerror=()=>toast('Não consegui abrir essa imagem');im.src=r.result};
  r.readAsDataURL(f);
 }
@@ -458,7 +459,7 @@ document.addEventListener('input',e=>{
 document.addEventListener('change',e=>{
  const t=e.target,d=t.dataset||{};
  if(t.id==='x-photo'){readPhoto(t.files[0]);return}
- if(t.id==='x-banner'){readBanner(t.files[0]);return}
+ if(t.id==='x-banner'||t.id==='x-banner-pp'){readBanner(t.files[0]);t.value='';return}
  if(d.xsn!==undefined){const o=d.xsn==='w'?P.w:P,pre=d.xsn==='w'?'w.':'';o.num=t.checked?'S/N':'';delete PE[pre+'num'];setupPage(true);return}
  if(t.id==='b-svc'||t.id==='b-dt'){refreshSlots();return}
  if(d.xver!==undefined){H.ver=t.checked;homePage();return}

@@ -50,6 +50,7 @@ async function route(){
   if(S.acc&&needSetup()&&r!=='configurar-perfil'&&!AUTH_ROUTES.includes(r))redir('configurar-perfil');
   if(r==='admin'&&!isAdmin())redir('home');
   if(r!=='mensagens')MSG.cur=null;
+  {const h=document.documentElement;h.classList.remove('rt');void h.offsetWidth;h.classList.add('rt');clearTimeout(route._t);route._t=setTimeout(()=>h.classList.remove('rt'),1100)}
   CUR=r;document.body.classList.toggle('appmode',!AUTH_ROUTES.includes(r));
   if(AUTH_ROUTES.includes(r)){authPage(r);document.title=(r==='entrar'?'Entrar':'Criar conta')+' | Beauty Hub';return}
   const pages={home:homePage,mercado:mercadoPage,network:netPage,radar:radarPage,busca:searchPage,favoritos:favPage,cadastro:signupPage,'meu-perfil':meuPerfil,admin:adminPage,'configurar-perfil':()=>setupPage(),agendamentos:agendaPage,mensagens:msgPage,perfil:perfilPage,profissional:()=>proPage(arg)};

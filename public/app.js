@@ -712,7 +712,7 @@ function tabbar(cur){
 let P=null,PE={},SUG={},srchT,cepT,qT;
 function newSetup(){
  const a=myAcc()||{},old=mySetup();
- const base={photo:'',rua:'',num:'',bairro:'',cidade:'',uf:'',cep:'',lat:null,lng:null,pref:[],
+ const base={photo:'',banner:'',rua:'',num:'',bairro:'',cidade:'',uf:'',cep:'',lat:null,lng:null,pref:[],
   nomeProf:'',spec:'',anos:'',bio:'',doc:a.doc||'',atend:'estudio',mesmo:true,w:{rua:'',num:'',bairro:'',cidade:'',uf:'',cep:''},raio:10,
   services:[],dias:[2,3,4,5,6],abre:'09:00',fecha:'18:00',pagto:['Pix'],wa:maskTel(a.tel||''),ig:'',agenda:''};
  const o=Object.assign(base,old?JSON.parse(JSON.stringify(old)):{});delete o.gallery;return o;
@@ -770,7 +770,8 @@ function setupPage(keep,focusNum){
  const a=myAcc()||{},pro=isPro(a),edit=!needSetup();
  const sub=edit?'Atualize seus dados quando quiser.':pro?'Precisamos de mais alguns dados para publicar o seu perfil profissional.':'Precisamos de mais alguns dados para liberar o app.';
  app().innerHTML=header('configurar-perfil',{nobar:true})+hero({title:edit?'Editar perfil':'Complete seu cadastro',sub})+`<main class="wrap">
-  <div class="ap-who"><label class="ap-photo" for="x-photo">${avatarHTML(P.photo,'','xl')}<span class="cam">${ic('camera')}</span><input id="x-photo" type="file" accept="image/*" hidden></label>
+  ${pro?`<div class="ap-banner${P.banner?' has':''}"${P.banner?` style="background-image:url('${esc(P.banner)}')"`:''}><div class="ap-bn-a"><label class="ap-bn-b" for="x-banner">${ic('camera')}<span>${P.banner?'Trocar banner':'Adicionar banner'}</span><input id="x-banner" type="file" accept="image/*" hidden></label>${P.banner?`<button type="button" class="ap-bn-x" data-xdelbanner aria-label="Remover banner">${ic('trash')}</button>`:''}</div></div>`:''}
+  <div class="ap-who${pro?' ovl':''}"><label class="ap-photo" for="x-photo">${avatarHTML(P.photo,'','xl')}<span class="cam">${ic('camera')}</span><input id="x-photo" type="file" accept="image/*" hidden></label>
    <b>${esc(a.nome||'')}</b><span class="pill">${ic(pro?'eyel':'user')}${pro?'Profissional':'Cliente'}</span><small>${esc(a.doc||'')}</small></div>
   <div class="xform"><section class="xsec"><h2>Endereço</h2><p class="xd">Ative sua localização ou busque seu endereço, depois confirme o número.</p>${addrBlock('')}</section>
   ${pro?proSections():`<section class="xsec"><h2>Estilos que você gosta</h2><p class="xd">Opcional. Ajuda a encontrar profissionais para o seu tipo de olhar.</p>${chips(PREFS.map(x=>[x,x]),P.pref,'data-xpref')}</section>`}</div>
@@ -810,6 +811,16 @@ async function cepLookup(t){
  const o=t==='w'?P.w:P,c=digits(o.cep);if(c.length!==8)return;
  try{const r=await fetch('https://viacep.com.br/ws/'+c+'/json/'),j=await r.json();if(j.erro)return;
   if(j.logradouro)o.rua=j.logradouro;if(j.bairro)o.bairro=j.bairro;if(j.localidade)o.cidade=j.localidade;if(j.uf)o.uf=j.uf;setupPage(true,true)}catch(e){}
+}
+function readBanner(f){
+ if(!f)return;if(!/^image\//.test(f.type)){toast('Escolha uma imagem');return}
+ const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{
+  const W=1280,Hh=427,c=document.createElement('canvas');c.width=W;c.height=Hh;
+  const k=Math.max(W/im.width,Hh/im.height),sw=W/k,sh=Hh/k;
+  c.getContext('2d').drawImage(im,(im.width-sw)/2,(im.height-sh)/2,sw,sh,0,0,W,Hh);
+  c.toBlob(b=>act(async()=>{const r=await API('POST','/api/me/banner',b,true);P.banner=r.banner;if(S.setup)S.setup.banner=r.banner;setupPage(true);toast('Banner atualizado')}),'image/jpeg',.85)};
+  im.onerror=()=>toast('Não consegui abrir essa imagem');im.src=r.result};
+ r.readAsDataURL(f);
 }
 function readPhoto(f){
  if(!f)return;if(!/^image\//.test(f.type)){toast('Escolha uma imagem');return}
@@ -1111,6 +1122,7 @@ document.addEventListener('click',e=>{
  if(t.closest('[data-xback]')){if(needSetup()){logout();toast('Você saiu da conta')}else go('perfil');return}
  if(t.closest('[data-xnotif]')){openNotifs();return}
  if(t.closest('[data-xmore]')){openMore();return}
+ if(t.closest('[data-xdelbanner]')){act(async()=>{await DEL('/api/me/banner');P.banner='';if(S.setup)S.setup.banner='';setupPage(true);toast('Banner removido')});return}
  if(t.closest('[data-xfilter]')){openFilter();return}
  if(el=t.closest('[data-xsortf]')){xfSet(el,()=>{H.sort=el.dataset.xsortf});return}
  if(el=t.closest('[data-xf-atend]')){xfSet(el,()=>{H.atend=el.dataset.xfAtend});return}
@@ -1162,6 +1174,7 @@ document.addEventListener('input',e=>{
 document.addEventListener('change',e=>{
  const t=e.target,d=t.dataset||{};
  if(t.id==='x-photo'){readPhoto(t.files[0]);return}
+ if(t.id==='x-banner'){readBanner(t.files[0]);return}
  if(t.id==='b-svc'||t.id==='b-dt'){refreshSlots();return}
  if(d.xver!==undefined){H.ver=t.checked;homePage();return}
  if(d.xtog){H[d.xtog]=t.checked;H.all=false;xfRefresh(true);return}
@@ -1209,7 +1222,7 @@ async function proPage(id){
   }
   const ext=(h,l)=>`<a class="btn ghost" href="${esc(h)}" target="_blank" rel="noopener noreferrer">${l}</a>`;
   app().innerHTML=header('profissional',{nobar:true})+`<main class="wrap pp">
-   <div class="pp-cover"></div>
+   <div class="pp-cover"${p.banner?` style="background-image:url('${esc(p.banner)}')"`:''}></div>
    <div class="pp-id">${avatarHTML(p.photo,p.name,'xl')}<div><h1>${esc(p.name)}</h1><small>${esc(p.role)} · ${esc(p.city)}</small>${p.verified?`<span class="pp-ver">${ic('shield')}Perfil verificado</span>`:''}</div></div>
    ${tot?`<div class="pp-rec"><div class="pp-rec-h"><span>Avaliações recentes</span><span class="rate">${ic('star','fill')} ${rateTxt(p)} <span>(${tot})</span></span></div>
      <div class="pp-rec-b">${last?`<div class="pp-mini"><b>${last.nota} ★ · ${ago(last.at)}</b><span>${esc((last.texto||NOTA_L[last.nota]||'').slice(0,60))}</span></div>`:''}<button class="btn ghost" data-pptab="aval">Ler avaliações</button></div></div>`:''}

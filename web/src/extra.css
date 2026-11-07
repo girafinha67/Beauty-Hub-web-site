@@ -103,3 +103,14 @@ html[data-dev="d"] .pc.has-cv>.pc-r{padding-right:18px}
 .xrange input,.xin{flex:1;min-width:0;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:14px;padding:12px 14px;font-size:16px;width:100%}
 .xfs .xck{margin:8px 0 0}
 .xfa{position:sticky;bottom:0;background:var(--surface);padding:14px 0 12px;margin-top:14px;border-top:1px solid var(--line);z-index:2}
+
+/* banner do perfil */
+.ap-banner{position:relative;height:150px;width:100vw;margin-left:calc(50% - 50vw);border-radius:0 0 28px 28px;background:linear-gradient(135deg,var(--wine),var(--rose));background-size:cover;background-position:center}
+html[data-dev="d"] .ap-banner{width:auto;margin:0;border-radius:24px;height:200px}
+.ap-bn-a{position:absolute;right:14px;top:14px;display:flex;gap:8px;z-index:2}
+.ap-bn-b,.ap-bn-x{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:999px;background:rgba(43,10,24,.62);color:#fff;padding:10px 16px;font-size:14.5px;cursor:pointer;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.ap-bn-b svg,.ap-bn-x svg{width:18px;height:18px}
+.ap-bn-x{padding:10px 12px}
+.ap-who.ovl{margin-top:-58px;position:relative}
+.ap-who.ovl .ap-av.xl{border:4px solid var(--bg)}
+.pp-cover{background-size:cover;background-position:center}

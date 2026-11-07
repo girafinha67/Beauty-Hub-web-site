@@ -71,6 +71,14 @@ test('upload de foto valida o conteúdo do arquivo', async () => {
   assert.equal(r.status, 200);
   const img = await fetch(T.base + r.body.photo);
   assert.equal(img.status, 200); assert.equal(img.headers.get('content-type'), 'image/png');
+  /* banner do perfil */
+  const b = await pro.raw('/api/me/banner', PNG);
+  assert.equal(b.status, 200); assert.ok(b.body.banner);
+  assert.equal((await fetch(T.base + b.body.banner)).status, 200);
+  assert.equal((await pro.get('/api/me')).body.setup.banner, b.body.banner);
+  assert.equal((await cli.get('/api/pros')).body.items[0].banner, b.body.banner);
+  assert.equal((await pro.del('/api/me/banner')).body.banner, '');
+  assert.equal((await cli.get('/api/pros')).body.items[0].banner, '');
 });
 
 let apptId, svcId, proRef;

@@ -106,6 +106,23 @@ R.post('/api/me/photo', { auth: true, raw: true }, ctx => {
   return { photo: url };
 });
 
+/* banner do perfil (faixa no topo do perfil público) */
+R.post('/api/me/banner', { auth: true, raw: true }, ctx => {
+  if (!D.isProAcc(ctx.account)) throw new HttpError(403, 'O banner é para perfis profissionais.');
+  const url = D.saveImage(ctx.body);
+  D.run('INSERT INTO setups(account_id) VALUES(?) ON CONFLICT(account_id) DO NOTHING', ctx.account.id);
+  const old = D.one('SELECT banner FROM setups WHERE account_id=?', ctx.account.id).banner;
+  D.run('UPDATE setups SET banner=? WHERE account_id=?', url, ctx.account.id);
+  D.removeImage(old);
+  return { banner: url };
+});
+R.delete('/api/me/banner', { auth: true }, ctx => {
+  const old = (D.one('SELECT banner FROM setups WHERE account_id=?', ctx.account.id) || {}).banner;
+  D.run("UPDATE setups SET banner='' WHERE account_id=?", ctx.account.id);
+  D.removeImage(old);
+  return { banner: '' };
+});
+
 function galleryLimit(accId) {
   const reg = D.one('SELECT * FROM registrations WHERE account_id=?', accId);
   return D.permsOf(reg, D.plansMap()).galeria ? GALLERY_PLAN : GALLERY_FREE;

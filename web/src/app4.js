@@ -56,7 +56,7 @@ async function route(){
   try{await (MODS[r]?modPage(r):pages[r]())}
   catch(e){
     if(seq!==routeSeq||e.status===401)return;
-    app().innerHTML=header(r)+`<main class="wrap"><div class="empty-state mt40"><p>${esc(e.message||'Não foi possível carregar.')}</p><button class="btn" data-retry>Tentar de novo</button></div></main>`+footer();
+    app().innerHTML=header(r)+`<main class="wrap"><div class="empty-state mt40"><p>${esc(e.status!==undefined?(e.message||'Não foi possível carregar.'):'Não foi possível abrir esta página agora. Toque em tentar de novo.')}</p><button class="btn" data-retry>Tentar de novo</button></div></main>`+footer();
   }
   if(seq!==routeSeq)return;
   const t={home:'Beauty Hub',cadastro:'Cadastro | Beauty Hub','meu-perfil':'Meu perfil | Beauty Hub',admin:'Admin | Beauty Hub',busca:'Busca | Beauty Hub',favoritos:'Favoritos | Beauty Hub',mercado:'Mercado | Beauty Hub',network:'Network | Beauty Hub',radar:'Radar | Beauty Hub','configurar-perfil':(needSetup()?'Complete seu cadastro':'Editar perfil')+' | Beauty Hub',agendamentos:'Agendamentos | Beauty Hub',mensagens:'Mensagens | Beauty Hub',perfil:'Meu perfil | Beauty Hub',profissional:'Perfil | Beauty Hub'};

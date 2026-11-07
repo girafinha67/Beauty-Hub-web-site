@@ -108,7 +108,6 @@ R.post('/api/me/photo', { auth: true, raw: true }, ctx => {
 
 /* banner do perfil (faixa no topo do perfil público) */
 R.post('/api/me/banner', { auth: true, raw: true }, ctx => {
-  if (!D.isProAcc(ctx.account)) throw new HttpError(403, 'O banner é para perfis profissionais.');
   const url = D.saveImage(ctx.body);
   D.run('INSERT INTO setups(account_id) VALUES(?) ON CONFLICT(account_id) DO NOTHING', ctx.account.id);
   const old = D.one('SELECT banner FROM setups WHERE account_id=?', ctx.account.id).banner;

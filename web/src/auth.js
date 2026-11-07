@@ -25,6 +25,8 @@ function cnpjOk(v){
   return true;
 }
 const maskTel=v=>{v=digits(v).slice(0,11);return v.length>10?`(${v.slice(0,2)}) ${v.slice(2,7)}-${v.slice(7)}`:v.length>6?`(${v.slice(0,2)}) ${v.slice(2,6)}-${v.slice(6)}`:v.length>2?`(${v.slice(0,2)}) ${v.slice(2)}`:v};
+const censorDoc=v=>{const d=String(v||'').replace(/\D/g,'');if(d.length===11)return '***.'+d.slice(3,6)+'.'+d.slice(6,9)+'-**';if(d.length===14)return '**.***.'+d.slice(5,8)+'/'+d.slice(8,12)+'-**';return d?'•'.repeat(Math.min(d.length,14)):''};
+const censorMail=e=>{const [u,d]=String(e||'').split('@');if(!d)return '';const [dn,...t]=d.split('.');return u.slice(0,1)+'•••••@'+dn.slice(0,1)+'•••'+(t.length?'.'+t.join('.'):'')};
 const maskDoc=(v,cnpj)=>{v=digits(v).slice(0,cnpj?14:11);
   if(v.length>11)return v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})$/,'$1.$2.$3/$4-$5').replace(/[-/.]$/,'');
   return v.replace(/^(\d{3})(\d{0,3})(\d{0,3})(\d{0,2})$/,(m,a,b,c,d)=>a+(b?'.'+b:'')+(c?'.'+c:'')+(d?'-'+d:''))};

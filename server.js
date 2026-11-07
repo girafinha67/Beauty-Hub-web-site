@@ -8,10 +8,13 @@ const { startJobs } = require('./lib/jobs');
 
 function start(port = cfg.port) {
   const server = http.createServer(handler);
-  server.requestTimeout = 30000;
+  server.requestTimeout = 30000; server.keepAliveTimeout = 65000; server.headersTimeout = 66000;
   return new Promise(res => server.listen(port, () => res(server)));
 }
 module.exports = { start };
+
+process.on('uncaughtException', e => console.error('[uncaughtException]', e));
+process.on('unhandledRejection', e => console.error('[unhandledRejection]', e));
 
 if (require.main === module) {
   start().then(s => {

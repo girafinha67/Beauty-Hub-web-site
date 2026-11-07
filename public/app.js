@@ -37,12 +37,18 @@ async function API(method,url,body,raw){
   const h={'X-BH':'1'};let b;
   if(raw){b=body;h['Content-Type']='application/octet-stream'}
   else if(body!==undefined){b=JSON.stringify(body);h['Content-Type']='application/json'}
-  let r;
-  try{r=await fetch(url,{method,headers:h,body:b,credentials:'same-origin'})}
-  catch(e){throw new ApiError(0,'Sem conexão com o servidor. Verifique sua internet e tente de novo.')}
-  let j=null;try{j=await r.json()}catch(e){}
+  let r,j=null;
+  const tries=method==='GET'?3:1;
+  for(let n=0;n<tries;n++){
+    try{r=await fetch(url,{method,headers:h,body:b,credentials:'same-origin'})}
+    catch(e){r=null}
+    if(r&&![502,503,504].includes(r.status))break;
+    if(n<tries-1)await new Promise(ok=>setTimeout(ok,500*(n+1)+Math.random()*300));
+  }
+  if(!r)throw new ApiError(0,'Sem conexão com o servidor. Verifique sua internet e tente de novo.');
+  try{j=await r.json()}catch(e){}
   if(!r.ok){
-    if(r.status===401&&S.acc&&!url.startsWith('/api/auth/')){S.acc=null;S.setup=null;S.reg=null;try{toast('Sua sessão expirou. Entre de novo.')}catch(e){}go('entrar')}
+    if(r.status===401&&S.acc&&!url.startsWith('/api/auth/')){S.acc=null;S.setup=null;S.reg=null;go('entrar')}
     throw new ApiError(r.status,(j&&j.error)||'Algo deu errado. Tente de novo.',j&&j.fields);
   }
   return j;
@@ -61,6 +67,14 @@ const ago=iso=>{
   const d=new Date(iso);return d.toLocaleDateString('pt-BR');
 };
 const isoDate=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+/* rede de segurança: nenhum erro solto deixa a tela em branco ou mostra texto técnico */
+addEventListener('unhandledrejection',e=>{e.preventDefault();console.error(e.reason)});
+addEventListener('error',e=>{if(e&&e.target&&e.target.tagName==='IMG')return;console.error(e.error||e.message)});
+/* imagem que não carrega (arquivo removido, rede ruim) some em vez de mostrar ícone quebrado */
+document.addEventListener('error',e=>{const t=e.target;if(!t||t.tagName!=='IMG')return;t.style.visibility='hidden';const p=t.parentElement;if(p)p.classList.add('img-bad');const c=t.closest('.pc');if(c)c.classList.remove('has-cv')},true);
+addEventListener('offline',()=>{try{toast('Você está sem internet. Assim que voltar, tudo continua de onde parou.')}catch(e){}});
+addEventListener('online',()=>{try{toast('Conexão restabelecida.')}catch(e){}});
 
 /* ===== Dispositivo: celular (app) ou computador (site) =====
    O site escolhe a "casca" pela largura da tela e troca sozinho se a janela mudar (girar o celular, redimensionar). */
@@ -274,10 +288,57 @@ const empty=t=>`<div class="empty-state">${t}</div>`;
 const loadingHTML=()=>`<div class="ap-empty"><p>Carregando…</p></div>`;
 
 /* ===== Páginas de módulo ===== */
+/* ===== busca e filtros das páginas de módulo (cursos, eventos, lojas...), para qualquer tipo de conta ===== */
+const MF={},MFI={};let MFK='';
+const mfNew=()=>({q:'',city:'',cat:[],modal:[],nivel:[],atend:[],envio:[],marca:[],pmin:'',pmax:'',when:'',fav:false});
+const MFG=[['cat','Categoria'],['modal','Modalidade'],['nivel','Nível'],['atend','Atendimento'],['envio','Envio'],['marca','Marca']];
+const mfNum=v=>{const n=parseFloat(String(v==null?'':v).replace(/[^\d,.-]/g,'').replace(/\.(?=\d{3}\b)/g,'').replace(',','.'));return Number.isFinite(n)?n:null};
+const mfNorm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const mfOpts=(items,k)=>[...new Set(items.map(i=>i[k]).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'pt-BR'));
+function mfCount(f){let n=0;if(f.q.trim())n++;if(f.city.trim())n++;MFG.forEach(([k])=>{if(f[k].length)n++});if(f.pmin!==''||f.pmax!=='')n++;if(f.when)n++;if(f.fav)n++;return n}
+function mfApply(items,f){
+  const q=mfNorm(f.q.trim()),c=mfNorm(f.city.trim()),pmin=mfNum(f.pmin),pmax=mfNum(f.pmax),today=isoDate(new Date()),wk=isoDate(new Date(Date.now()+7*864e5)),mo=isoDate(new Date(Date.now()+31*864e5));
+  return items.filter(i=>{
+    if(q&&!mfNorm([i.title,i.desc,i.cat,i.city,i.byName,i.marca,(i.tags||[]).join(' ')].join(' ')).includes(q))return false;
+    if(c&&!mfNorm(i.city).includes(c))return false;
+    for(const [k] of MFG)if(f[k].length&&!f[k].includes(i[k]))return false;
+    const p=mfNum(i.price);if(pmin!==null&&(p===null||p<pmin))return false;if(pmax!==null&&(p===null||p>pmax))return false;
+    if(f.when){const d=i.date||'';if(!d||d<today)return false;if(f.when==='week'&&d>wk)return false;if(f.when==='month'&&d>mo)return false}
+    if(f.fav&&!S.favs.includes(i.id))return false;
+    return true});
+}
+const mfBar=k=>{const f=MF[k],n=mfCount(f);return `<div class="mf-bar"><div class="ap-search mf-s">${ic('search')}<input type="search" data-mf-q placeholder="Buscar nesta página" value="${esc(f.q)}" aria-label="Buscar nesta página"><button class="fl" data-mf-open aria-label="Filtros${n?' ('+n+' ativos)':''}">${ic('sliders')}${n?`<i class="fl-n">${n}</i>`:''}</button></div></div>`};
+const mfList=k=>{const items=mfApply(MFI[k]||[],MF[k]);return items.length?items.map(card).join(''):empty(mfCount(MF[k])?'Nada com esses filtros. Tente remover algum.':'Nada publicado aqui por enquanto.')};
+function mfSheet(){
+  const k=MFK,f=MF[k],all=MFI[k]||[],has=all.some(i=>mfNum(i.price)!==null),hasD=all.some(i=>i.date);
+  const chips=(g)=>{const o=mfOpts(all,g);return o.length?`<div class="xchips">${o.map(v=>`<button type="button" class="xchip" data-mf-t="${g}" data-v="${esc(v)}" aria-pressed="${f[g].includes(v)}">${esc(v)}</button>`).join('')}</div>`:''};
+  openSheet(`${closeBtn}<div class="body xfs"><h2>Filtros</h2>
+   ${MFG.map(([g,l])=>{const c=chips(g);return c?`<span class="xcap">${l}</span>${c}`:''}).join('')}
+   <span class="xcap">Cidade ou bairro</span><input class="xin" type="search" data-mf-city placeholder="Ex.: São Luís" value="${esc(f.city)}" aria-label="Cidade">
+   ${has?`<span class="xcap">Faixa de preço (R$)</span><div class="xrange"><input type="number" inputmode="numeric" min="0" placeholder="De" data-mf-pmin value="${esc(f.pmin)}" aria-label="Preço mínimo"><span>até</span><input type="number" inputmode="numeric" min="0" placeholder="Até" data-mf-pmax value="${esc(f.pmax)}" aria-label="Preço máximo"></div>`:''}
+   ${hasD?`<span class="xcap">Quando</span><div class="xchips">${[['','Qualquer data'],['week','Próximos 7 dias'],['month','Próximos 30 dias'],['next','Só futuros']].map(([v,l])=>`<button type="button" class="xchip" data-mf-when="${v}" aria-pressed="${f.when===v}">${l}</button>`).join('')}</div>`:''}
+   <label class="xck"><input type="checkbox" data-mf-fav ${f.fav?'checked':''}><span>Somente meus favoritos</span></label>
+   <div class="row-actions xfa"><button class="btn" data-mf-done>${mfLabel()}</button><button class="btn ghost" data-mf-clear>Limpar filtros</button></div></div>`);
+}
+const mfLabel=()=>{const n=mfApply(MFI[MFK]||[],MF[MFK]).length;return n?`Ver ${n} resultado${n===1?'':'s'}`:'Nenhum resultado'};
+function mfRefresh(){const l=$('#mf-list');if(l)l.innerHTML=mfList(MFK);const d=$('[data-mf-done]');if(d)d.textContent=mfLabel();const b=$('[data-mf-open]');if(b){const n=mfCount(MF[MFK]);b.querySelector('.fl-n')?.remove();if(n)b.insertAdjacentHTML('beforeend',`<i class="fl-n">${n}</i>`)}}
+let mfT;
+document.addEventListener('input',e=>{const t=e.target;if(!t.matches||!MFK||!MF[MFK])return;const f=MF[MFK];
+  if(t.matches('[data-mf-q]'))f.q=t.value;else if(t.matches('[data-mf-city]'))f.city=t.value;else if(t.matches('[data-mf-pmin]'))f.pmin=t.value===''?'':String(Math.max(0,+t.value));else if(t.matches('[data-mf-pmax]'))f.pmax=t.value===''?'':String(Math.max(0,+t.value));else return;
+  clearTimeout(mfT);mfT=setTimeout(mfRefresh,200)});
+document.addEventListener('change',e=>{const t=e.target;if(t.matches&&t.matches('[data-mf-fav]')&&MFK){MF[MFK].fav=t.checked;mfRefresh()}});
+document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('[data-mf-open],[data-mf-t],[data-mf-when],[data-mf-done],[data-mf-clear]');if(!t||!MFK||!MF[MFK])return;
+  const f=MF[MFK];
+  if(t.matches('[data-mf-open]'))return mfSheet();
+  if(t.matches('[data-mf-t]')){const g=t.dataset.mfT,v=t.dataset.v,i=f[g].indexOf(v);i>=0?f[g].splice(i,1):f[g].push(v);t.setAttribute('aria-pressed',i<0);return mfRefresh()}
+  if(t.matches('[data-mf-when]')){f.when=t.dataset.mfWhen;document.querySelectorAll('[data-mf-when]').forEach(b=>b.setAttribute('aria-pressed',b===t));return mfRefresh()}
+  if(t.matches('[data-mf-done]'))return closeSheet();
+  if(t.matches('[data-mf-clear]')){MF[MFK]=mfNew();closeSheet();const l=$('#mf-list');if(l)l.innerHTML=mfList(MFK);const s=$('[data-mf-q]');if(s)s.value='';mfRefresh()}});
 async function modPage(k){
   const M=MODS[k],r=await GET('/api/listings?mod='+k),items=remember(r.items);
+  MFK=k;MFI[k]=items;MF[k]=MF[k]||mfNew();
   app().innerHTML=header(k)+hero({title:M.title,sub:M.sub})+
-  `<main class="wrap"><div class="list">${items.length?items.map(card).join(''):empty('Nada publicado aqui por enquanto.')}</div>${ctaBand(M.cta)}</main>`+footer();
+  `<main class="wrap">${items.length?mfBar(k):''}<div class="list" id="mf-list">${mfList(k)}</div>${ctaBand(M.cta)}</main>`+footer();
 }
 function mercadoPage(){
   const ks=['lojas','marcas','tecnologia','campeonatos'];
@@ -532,6 +593,8 @@ function cnpjOk(v){
   return true;
 }
 const maskTel=v=>{v=digits(v).slice(0,11);return v.length>10?`(${v.slice(0,2)}) ${v.slice(2,7)}-${v.slice(7)}`:v.length>6?`(${v.slice(0,2)}) ${v.slice(2,6)}-${v.slice(6)}`:v.length>2?`(${v.slice(0,2)}) ${v.slice(2)}`:v};
+const censorDoc=v=>{const d=String(v||'').replace(/\D/g,'');if(d.length===11)return '***.'+d.slice(3,6)+'.'+d.slice(6,9)+'-**';if(d.length===14)return '**.***.'+d.slice(5,8)+'/'+d.slice(8,12)+'-**';return d?'•'.repeat(Math.min(d.length,14)):''};
+const censorMail=e=>{const [u,d]=String(e||'').split('@');if(!d)return '';const [dn,...t]=d.split('.');return u.slice(0,1)+'•••••@'+dn.slice(0,1)+'•••'+(t.length?'.'+t.join('.'):'')};
 const maskDoc=(v,cnpj)=>{v=digits(v).slice(0,cnpj?14:11);
   if(v.length>11)return v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})$/,'$1.$2.$3/$4-$5').replace(/[-/.]$/,'');
   return v.replace(/^(\d{3})(\d{0,3})(\d{0,3})(\d{0,2})$/,(m,a,b,c,d)=>a+(b?'.'+b:'')+(c?'.'+c:'')+(d?'-'+d:''))};
@@ -706,7 +769,8 @@ const logoRow=()=>`<div class="ap-logo">${logoMark(true)}<b>Beauty Hub</b></div>
 function avatarHTML(photo,name,cls=''){return `<div class="ap-av ${cls}">${photo?`<img src="${esc(photo)}" alt="">`:(name?`<span>${esc(initials(name))}</span>`:ic('user'))}</div>`}
 function tabbar(cur){
  const T=[['home','home','Home'],['agendamentos','cal','Agendamentos'],['mensagens','chat','Mensagens'],['perfil','user','Perfil']];
- return `<nav class="tabbar" aria-label="Principal">${T.map(([r,i,l])=>`<button data-go="${r}" ${cur===r?'aria-current="page"':''}>${ic(i)}<span>${l}</span>${r==='mensagens'&&S.counts.msgs?`<em class="cnt">${S.counts.msgs}</em>`:''}</button>`).join('')}</nav>`;
+ const ci=Math.max(0,T.findIndex(x=>x[0]===cur)),pi=window.__tabI==null?ci:window.__tabI;window.__tabI=ci;if(pi!==ci)requestAnimationFrame(()=>requestAnimationFrame(()=>{const n=document.querySelector('.tabbar .ind');if(n)n.style.setProperty('--i',ci)}));
+ return `<nav class="tabbar" aria-label="Principal" style="--i:${pi}">${cur?'<span class="ind" aria-hidden="true"></span>':''}${T.map(([r,i,l])=>`<button data-go="${r}" ${cur===r?'aria-current="page"':''}>${ic(i)}<span>${l}</span>${r==='mensagens'&&S.counts.msgs?`<em class="cnt">${S.counts.msgs}</em>`:''}</button>`).join('')}</nav>`;
 }
 /* ===================== CONFIGURAR PERFIL ===================== */
 let P=null,PE={},SUG={},srchT,cepT,qT;
@@ -770,9 +834,9 @@ function setupPage(keep,focusNum){
  const a=myAcc()||{},pro=isPro(a),edit=!needSetup();
  const sub=edit?'Atualize seus dados quando quiser.':pro?'Precisamos de mais alguns dados para publicar o seu perfil profissional.':'Precisamos de mais alguns dados para liberar o app.';
  app().innerHTML=header('configurar-perfil',{nobar:true})+hero({title:edit?'Editar perfil':'Complete seu cadastro',sub})+`<main class="wrap">
-  ${pro?`<div class="ap-banner${P.banner?' has':''}"${P.banner?` style="background-image:url('${esc(P.banner)}')"`:''}><div class="ap-bn-a"><label class="ap-bn-b" for="x-banner">${ic('camera')}<span>${P.banner?'Trocar banner':'Adicionar banner'}</span><input id="x-banner" type="file" accept="image/*" hidden></label>${P.banner?`<button type="button" class="ap-bn-x" data-xdelbanner aria-label="Remover banner">${ic('trash')}</button>`:''}</div></div>`:''}
-  <div class="ap-who${pro?' ovl':''}"><label class="ap-photo" for="x-photo">${avatarHTML(P.photo,'','xl')}<span class="cam">${ic('camera')}</span><input id="x-photo" type="file" accept="image/*" hidden></label>
-   <b>${esc(a.nome||'')}</b><span class="pill">${ic(pro?'eyel':'user')}${pro?'Profissional':'Cliente'}</span><small>${esc(a.doc||'')}</small></div>
+  ${bnHTML(P.banner)}
+  <div class="ap-who ovl"><label class="ap-photo" for="x-photo">${avatarHTML(P.photo,'','xl')}<span class="cam">${ic('camera')}</span><input id="x-photo" type="file" accept="image/*" hidden></label>
+   <b>${esc(a.nome||'')}</b><span class="pill">${ic(pro?'eyel':'user')}${pro?'Profissional':'Cliente'}</span><small title="Seus dados ficam protegidos">${esc(censorDoc(a.doc))}</small></div>
   <div class="xform"><section class="xsec"><h2>Endereço</h2><p class="xd">Ative sua localização ou busque seu endereço, depois confirme o número.</p>${addrBlock('')}</section>
   ${pro?proSections():`<section class="xsec"><h2>Estilos que você gosta</h2><p class="xd">Opcional. Ajuda a encontrar profissionais para o seu tipo de olhar.</p>${chips(PREFS.map(x=>[x,x]),P.pref,'data-xpref')}</section>`}</div>
   <div class="xtip">${ic('eyel')}<p>${pro?'Depois de concluir, adicione fotos dos seus trabalhos no perfil. Elas fazem toda a diferença para novas clientes.':'Depois de concluir, salve suas profissionais favoritas e solicite um horário direto pelo app.'}</p></div>
@@ -812,13 +876,16 @@ async function cepLookup(t){
  try{const r=await fetch('https://viacep.com.br/ws/'+c+'/json/'),j=await r.json();if(j.erro)return;
   if(j.logradouro)o.rua=j.logradouro;if(j.bairro)o.bairro=j.bairro;if(j.localidade)o.cidade=j.localidade;if(j.uf)o.uf=j.uf;setupPage(true,true)}catch(e){}
 }
+const bnHTML=(url,cls='')=>`<div class="ap-banner ${cls}${url?' has':''}">${url?`<img class="bn-img" src="${esc(url)}" alt="" decoding="async">`:''}<div class="ap-bn-a"><label class="ap-bn-b" for="x-banner">${ic('camera')}<span>${url?'Trocar banner':'Adicionar banner'}</span><input id="x-banner" type="file" accept="image/*" hidden></label>${url?`<button type="button" class="ap-bn-x" data-xdelbanner aria-label="Remover banner">${ic('trash')}</button>`:''}</div></div>`;
+const bnCur=()=>(S.setup&&S.setup.banner)||'';
+const bnRerender=()=>{if(CUR==='perfil')perfilPage();else setupPage(true)};
 function readBanner(f){
  if(!f)return;if(!/^image\//.test(f.type)){toast('Escolha uma imagem');return}
  const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{
   const W=1280,Hh=427,c=document.createElement('canvas');c.width=W;c.height=Hh;
   const k=Math.max(W/im.width,Hh/im.height),sw=W/k,sh=Hh/k;
   c.getContext('2d').drawImage(im,(im.width-sw)/2,(im.height-sh)/2,sw,sh,0,0,W,Hh);
-  c.toBlob(b=>act(async()=>{const r=await API('POST','/api/me/banner',b,true);P.banner=r.banner;if(S.setup)S.setup.banner=r.banner;setupPage(true);toast('Banner atualizado')}),'image/jpeg',.85)};
+  c.toBlob(b=>act(async()=>{const r=await API('POST','/api/me/banner',b,true);const nb=r.banner+'?v='+Date.now();if(P)P.banner=nb;if(S.setup)S.setup.banner=nb;bnRerender();toast('Banner atualizado')}),'image/jpeg',.85)};
   im.onerror=()=>toast('Não consegui abrir essa imagem');im.src=r.result};
  r.readAsDataURL(f);
 }
@@ -1102,8 +1169,8 @@ function perfilPage(){
  const a=myAcc()||{},s=mySetup()||{},pro=isPro(a),wk=(s.atend==='domicilio'||s.mesmo)?s:(s.w||{});
  const row=(l,v)=>v?`<div class="fact"><small>${l}</small>${esc(v)}</div>`:'';
  const addr=o=>[o.rua&&(o.rua+', '+o.num),o.bairro,o.cidade&&(o.cidade+' - '+o.uf),o.cep].filter(Boolean).join(' · ');
- app().innerHTML=header('perfil')+hero({title:'Meu perfil',sub:'Seus dados e preferências.'})+`<main class="wrap"><div class="pf2"><div class="pf2-a">
-  <div class="ap-who left">${avatarHTML(s.photo,a.nome,'xl')}<b>${esc(pro?(s.nomeProf||a.nome):a.nome)}</b><span class="pill">${ic(pro?'eyel':'user')}${pro?esc(s.spec||'Profissional'):'Cliente'}</span><small>${esc(a.email||'')}</small></div>
+ app().innerHTML=header('perfil')+hero({title:'Meu perfil',sub:'Seus dados e preferências.'})+`<main class="wrap">${bnHTML(s.banner,'pfb')}<div class="pf2"><div class="pf2-a">
+  <div class="ap-who left">${avatarHTML(s.photo,a.nome,'xl')}<b>${esc(pro?(s.nomeProf||a.nome):a.nome)}</b><span class="pill">${ic(pro?'eyel':'user')}${pro?esc(s.spec||'Profissional'):'Cliente'}</span><small>${esc(censorMail(a.email))}</small></div>
   <div class="row-actions" style="justify-content:center"><button class="btn" data-go="configurar-perfil">Editar perfil</button></div></div>
   <div class="pf2-b"><section class="xsec"><h2>Endereço</h2><div class="facts">${row('Endereço',addr(s))}</div></section>
   ${pro?`<section class="xsec"><h2>Serviços</h2><div class="xps">${(s.services||[]).map(v=>`<div><span>${esc(v.n)}<small>${durTxt(v.d)}</small></span><b>${brl0(v.p)}</b></div>`).join('')}</div></section>
@@ -1122,7 +1189,7 @@ document.addEventListener('click',e=>{
  if(t.closest('[data-xback]')){if(needSetup()){logout();toast('Você saiu da conta')}else go('perfil');return}
  if(t.closest('[data-xnotif]')){openNotifs();return}
  if(t.closest('[data-xmore]')){openMore();return}
- if(t.closest('[data-xdelbanner]')){act(async()=>{await DEL('/api/me/banner');P.banner='';if(S.setup)S.setup.banner='';setupPage(true);toast('Banner removido')});return}
+ if(t.closest('[data-xdelbanner]')){act(async()=>{await DEL('/api/me/banner');if(P)P.banner='';if(S.setup)S.setup.banner='';bnRerender();toast('Banner removido')});return}
  if(t.closest('[data-xfilter]')){openFilter();return}
  if(el=t.closest('[data-xsortf]')){xfSet(el,()=>{H.sort=el.dataset.xsortf});return}
  if(el=t.closest('[data-xf-atend]')){xfSet(el,()=>{H.atend=el.dataset.xfAtend});return}
@@ -1222,7 +1289,7 @@ async function proPage(id){
   }
   const ext=(h,l)=>`<a class="btn ghost" href="${esc(h)}" target="_blank" rel="noopener noreferrer">${l}</a>`;
   app().innerHTML=header('profissional',{nobar:true})+`<main class="wrap pp">
-   <div class="pp-cover"${p.banner?` style="background-image:url('${esc(p.banner)}')"`:''}></div>
+   <div class="pp-cover">${p.banner?`<img class="bn-img" src="${esc(p.banner)}" alt="" decoding="async">`:''}</div>
    <div class="pp-id">${avatarHTML(p.photo,p.name,'xl')}<div><h1>${esc(p.name)}</h1><small>${esc(p.role)} · ${esc(p.city)}</small>${p.verified?`<span class="pp-ver">${ic('shield')}Perfil verificado</span>`:''}</div></div>
    ${tot?`<div class="pp-rec"><div class="pp-rec-h"><span>Avaliações recentes</span><span class="rate">${ic('star','fill')} ${rateTxt(p)} <span>(${tot})</span></span></div>
      <div class="pp-rec-b">${last?`<div class="pp-mini"><b>${last.nota} ★ · ${ago(last.at)}</b><span>${esc((last.texto||NOTA_L[last.nota]||'').slice(0,60))}</span></div>`:''}<button class="btn ghost" data-pptab="aval">Ler avaliações</button></div></div>`:''}
@@ -1330,7 +1397,7 @@ async function route(){
   try{await (MODS[r]?modPage(r):pages[r]())}
   catch(e){
     if(seq!==routeSeq||e.status===401)return;
-    app().innerHTML=header(r)+`<main class="wrap"><div class="empty-state mt40"><p>${esc(e.message||'Não foi possível carregar.')}</p><button class="btn" data-retry>Tentar de novo</button></div></main>`+footer();
+    app().innerHTML=header(r)+`<main class="wrap"><div class="empty-state mt40"><p>${esc(e.status!==undefined?(e.message||'Não foi possível carregar.'):'Não foi possível abrir esta página agora. Toque em tentar de novo.')}</p><button class="btn" data-retry>Tentar de novo</button></div></main>`+footer();
   }
   if(seq!==routeSeq)return;
   const t={home:'Beauty Hub',cadastro:'Cadastro | Beauty Hub','meu-perfil':'Meu perfil | Beauty Hub',admin:'Admin | Beauty Hub',busca:'Busca | Beauty Hub',favoritos:'Favoritos | Beauty Hub',mercado:'Mercado | Beauty Hub',network:'Network | Beauty Hub',radar:'Radar | Beauty Hub','configurar-perfil':(needSetup()?'Complete seu cadastro':'Editar perfil')+' | Beauty Hub',agendamentos:'Agendamentos | Beauty Hub',mensagens:'Mensagens | Beauty Hub',perfil:'Meu perfil | Beauty Hub',profissional:'Perfil | Beauty Hub'};

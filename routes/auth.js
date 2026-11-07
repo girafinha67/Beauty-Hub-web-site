@@ -30,7 +30,7 @@ R.post('/api/auth/signup', async ctx => {
   const r = D.run('INSERT INTO accounts(nome,tel,doc,email,obj,papel,pw,created_at) VALUES(?,?,?,?,?,?,?,?)',
     nome, V.maskTel(tel), doc, email, obj, papel, await S.hashPassword(b.senha), D.now());
   const t = S.createSession(Number(r.lastInsertRowid));
-  ctx.setCookie(sessionCookie(t, 30 * 86400));
+  ctx.setCookie(sessionCookie(t, S.SESSION_SEC));
   return meJson(D.one('SELECT * FROM accounts WHERE id=?', Number(r.lastInsertRowid)));
 });
 
@@ -41,7 +41,7 @@ R.post('/api/auth/login', async ctx => {
   const acc = D.one('SELECT * FROM accounts WHERE email=?', email);
   if (!acc) { await S.burnTime(pw); throw new HttpError(401, 'E-mail ou senha incorretos.'); }
   if (!(await S.verifyPassword(pw, acc.pw))) throw new HttpError(401, 'E-mail ou senha incorretos.');
-  ctx.setCookie(sessionCookie(S.createSession(acc.id), 30 * 86400));
+  ctx.setCookie(sessionCookie(S.createSession(acc.id), S.SESSION_SEC));
   return meJson(acc);
 });
 

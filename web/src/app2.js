@@ -68,10 +68,57 @@ const empty=t=>`<div class="empty-state">${t}</div>`;
 const loadingHTML=()=>`<div class="ap-empty"><p>Carregando…</p></div>`;
 
 /* ===== Páginas de módulo ===== */
+/* ===== busca e filtros das páginas de módulo (cursos, eventos, lojas...), para qualquer tipo de conta ===== */
+const MF={},MFI={};let MFK='';
+const mfNew=()=>({q:'',city:'',cat:[],modal:[],nivel:[],atend:[],envio:[],marca:[],pmin:'',pmax:'',when:'',fav:false});
+const MFG=[['cat','Categoria'],['modal','Modalidade'],['nivel','Nível'],['atend','Atendimento'],['envio','Envio'],['marca','Marca']];
+const mfNum=v=>{const n=parseFloat(String(v==null?'':v).replace(/[^\d,.-]/g,'').replace(/\.(?=\d{3}\b)/g,'').replace(',','.'));return Number.isFinite(n)?n:null};
+const mfNorm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const mfOpts=(items,k)=>[...new Set(items.map(i=>i[k]).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'pt-BR'));
+function mfCount(f){let n=0;if(f.q.trim())n++;if(f.city.trim())n++;MFG.forEach(([k])=>{if(f[k].length)n++});if(f.pmin!==''||f.pmax!=='')n++;if(f.when)n++;if(f.fav)n++;return n}
+function mfApply(items,f){
+  const q=mfNorm(f.q.trim()),c=mfNorm(f.city.trim()),pmin=mfNum(f.pmin),pmax=mfNum(f.pmax),today=isoDate(new Date()),wk=isoDate(new Date(Date.now()+7*864e5)),mo=isoDate(new Date(Date.now()+31*864e5));
+  return items.filter(i=>{
+    if(q&&!mfNorm([i.title,i.desc,i.cat,i.city,i.byName,i.marca,(i.tags||[]).join(' ')].join(' ')).includes(q))return false;
+    if(c&&!mfNorm(i.city).includes(c))return false;
+    for(const [k] of MFG)if(f[k].length&&!f[k].includes(i[k]))return false;
+    const p=mfNum(i.price);if(pmin!==null&&(p===null||p<pmin))return false;if(pmax!==null&&(p===null||p>pmax))return false;
+    if(f.when){const d=i.date||'';if(!d||d<today)return false;if(f.when==='week'&&d>wk)return false;if(f.when==='month'&&d>mo)return false}
+    if(f.fav&&!S.favs.includes(i.id))return false;
+    return true});
+}
+const mfBar=k=>{const f=MF[k],n=mfCount(f);return `<div class="mf-bar"><div class="ap-search mf-s">${ic('search')}<input type="search" data-mf-q placeholder="Buscar nesta página" value="${esc(f.q)}" aria-label="Buscar nesta página"><button class="fl" data-mf-open aria-label="Filtros${n?' ('+n+' ativos)':''}">${ic('sliders')}${n?`<i class="fl-n">${n}</i>`:''}</button></div></div>`};
+const mfList=k=>{const items=mfApply(MFI[k]||[],MF[k]);return items.length?items.map(card).join(''):empty(mfCount(MF[k])?'Nada com esses filtros. Tente remover algum.':'Nada publicado aqui por enquanto.')};
+function mfSheet(){
+  const k=MFK,f=MF[k],all=MFI[k]||[],has=all.some(i=>mfNum(i.price)!==null),hasD=all.some(i=>i.date);
+  const chips=(g)=>{const o=mfOpts(all,g);return o.length?`<div class="xchips">${o.map(v=>`<button type="button" class="xchip" data-mf-t="${g}" data-v="${esc(v)}" aria-pressed="${f[g].includes(v)}">${esc(v)}</button>`).join('')}</div>`:''};
+  openSheet(`${closeBtn}<div class="body xfs"><h2>Filtros</h2>
+   ${MFG.map(([g,l])=>{const c=chips(g);return c?`<span class="xcap">${l}</span>${c}`:''}).join('')}
+   <span class="xcap">Cidade ou bairro</span><input class="xin" type="search" data-mf-city placeholder="Ex.: São Luís" value="${esc(f.city)}" aria-label="Cidade">
+   ${has?`<span class="xcap">Faixa de preço (R$)</span><div class="xrange"><input type="number" inputmode="numeric" min="0" placeholder="De" data-mf-pmin value="${esc(f.pmin)}" aria-label="Preço mínimo"><span>até</span><input type="number" inputmode="numeric" min="0" placeholder="Até" data-mf-pmax value="${esc(f.pmax)}" aria-label="Preço máximo"></div>`:''}
+   ${hasD?`<span class="xcap">Quando</span><div class="xchips">${[['','Qualquer data'],['week','Próximos 7 dias'],['month','Próximos 30 dias'],['next','Só futuros']].map(([v,l])=>`<button type="button" class="xchip" data-mf-when="${v}" aria-pressed="${f.when===v}">${l}</button>`).join('')}</div>`:''}
+   <label class="xck"><input type="checkbox" data-mf-fav ${f.fav?'checked':''}><span>Somente meus favoritos</span></label>
+   <div class="row-actions xfa"><button class="btn" data-mf-done>${mfLabel()}</button><button class="btn ghost" data-mf-clear>Limpar filtros</button></div></div>`);
+}
+const mfLabel=()=>{const n=mfApply(MFI[MFK]||[],MF[MFK]).length;return n?`Ver ${n} resultado${n===1?'':'s'}`:'Nenhum resultado'};
+function mfRefresh(){const l=$('#mf-list');if(l)l.innerHTML=mfList(MFK);const d=$('[data-mf-done]');if(d)d.textContent=mfLabel();const b=$('[data-mf-open]');if(b){const n=mfCount(MF[MFK]);b.querySelector('.fl-n')?.remove();if(n)b.insertAdjacentHTML('beforeend',`<i class="fl-n">${n}</i>`)}}
+let mfT;
+document.addEventListener('input',e=>{const t=e.target;if(!t.matches||!MFK||!MF[MFK])return;const f=MF[MFK];
+  if(t.matches('[data-mf-q]'))f.q=t.value;else if(t.matches('[data-mf-city]'))f.city=t.value;else if(t.matches('[data-mf-pmin]'))f.pmin=t.value===''?'':String(Math.max(0,+t.value));else if(t.matches('[data-mf-pmax]'))f.pmax=t.value===''?'':String(Math.max(0,+t.value));else return;
+  clearTimeout(mfT);mfT=setTimeout(mfRefresh,200)});
+document.addEventListener('change',e=>{const t=e.target;if(t.matches&&t.matches('[data-mf-fav]')&&MFK){MF[MFK].fav=t.checked;mfRefresh()}});
+document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('[data-mf-open],[data-mf-t],[data-mf-when],[data-mf-done],[data-mf-clear]');if(!t||!MFK||!MF[MFK])return;
+  const f=MF[MFK];
+  if(t.matches('[data-mf-open]'))return mfSheet();
+  if(t.matches('[data-mf-t]')){const g=t.dataset.mfT,v=t.dataset.v,i=f[g].indexOf(v);i>=0?f[g].splice(i,1):f[g].push(v);t.setAttribute('aria-pressed',i<0);return mfRefresh()}
+  if(t.matches('[data-mf-when]')){f.when=t.dataset.mfWhen;document.querySelectorAll('[data-mf-when]').forEach(b=>b.setAttribute('aria-pressed',b===t));return mfRefresh()}
+  if(t.matches('[data-mf-done]'))return closeSheet();
+  if(t.matches('[data-mf-clear]')){MF[MFK]=mfNew();closeSheet();const l=$('#mf-list');if(l)l.innerHTML=mfList(MFK);const s=$('[data-mf-q]');if(s)s.value='';mfRefresh()}});
 async function modPage(k){
   const M=MODS[k],r=await GET('/api/listings?mod='+k),items=remember(r.items);
+  MFK=k;MFI[k]=items;MF[k]=MF[k]||mfNew();
   app().innerHTML=header(k)+hero({title:M.title,sub:M.sub})+
-  `<main class="wrap"><div class="list">${items.length?items.map(card).join(''):empty('Nada publicado aqui por enquanto.')}</div>${ctaBand(M.cta)}</main>`+footer();
+  `<main class="wrap">${items.length?mfBar(k):''}<div class="list" id="mf-list">${mfList(k)}</div>${ctaBand(M.cta)}</main>`+footer();
 }
 function mercadoPage(){
   const ks=['lojas','marcas','tecnologia','campeonatos'];

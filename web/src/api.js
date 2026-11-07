@@ -7,12 +7,18 @@ async function API(method,url,body,raw){
   const h={'X-BH':'1'};let b;
   if(raw){b=body;h['Content-Type']='application/octet-stream'}
   else if(body!==undefined){b=JSON.stringify(body);h['Content-Type']='application/json'}
-  let r;
-  try{r=await fetch(url,{method,headers:h,body:b,credentials:'same-origin'})}
-  catch(e){throw new ApiError(0,'Sem conexão com o servidor. Verifique sua internet e tente de novo.')}
-  let j=null;try{j=await r.json()}catch(e){}
+  let r,j=null;
+  const tries=method==='GET'?3:1;
+  for(let n=0;n<tries;n++){
+    try{r=await fetch(url,{method,headers:h,body:b,credentials:'same-origin'})}
+    catch(e){r=null}
+    if(r&&![502,503,504].includes(r.status))break;
+    if(n<tries-1)await new Promise(ok=>setTimeout(ok,500*(n+1)+Math.random()*300));
+  }
+  if(!r)throw new ApiError(0,'Sem conexão com o servidor. Verifique sua internet e tente de novo.');
+  try{j=await r.json()}catch(e){}
   if(!r.ok){
-    if(r.status===401&&S.acc&&!url.startsWith('/api/auth/')){S.acc=null;S.setup=null;S.reg=null;try{toast('Sua sessão expirou. Entre de novo.')}catch(e){}go('entrar')}
+    if(r.status===401&&S.acc&&!url.startsWith('/api/auth/')){S.acc=null;S.setup=null;S.reg=null;go('entrar')}
     throw new ApiError(r.status,(j&&j.error)||'Algo deu errado. Tente de novo.',j&&j.fields);
   }
   return j;
@@ -31,3 +37,11 @@ const ago=iso=>{
   const d=new Date(iso);return d.toLocaleDateString('pt-BR');
 };
 const isoDate=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+/* rede de segurança: nenhum erro solto deixa a tela em branco ou mostra texto técnico */
+addEventListener('unhandledrejection',e=>{e.preventDefault();console.error(e.reason)});
+addEventListener('error',e=>{if(e&&e.target&&e.target.tagName==='IMG')return;console.error(e.error||e.message)});
+/* imagem que não carrega (arquivo removido, rede ruim) some em vez de mostrar ícone quebrado */
+document.addEventListener('error',e=>{const t=e.target;if(!t||t.tagName!=='IMG')return;t.style.visibility='hidden';const p=t.parentElement;if(p)p.classList.add('img-bad');const c=t.closest('.pc');if(c)c.classList.remove('has-cv')},true);
+addEventListener('offline',()=>{try{toast('Você está sem internet. Assim que voltar, tudo continua de onde parou.')}catch(e){}});
+addEventListener('online',()=>{try{toast('Conexão restabelecida.')}catch(e){}});

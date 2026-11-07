@@ -41,7 +41,8 @@ const logoRow=()=>`<div class="ap-logo">${logoMark(true)}<b>Beauty Hub</b></div>
 function avatarHTML(photo,name,cls=''){return `<div class="ap-av ${cls}">${photo?`<img src="${esc(photo)}" alt="">`:(name?`<span>${esc(initials(name))}</span>`:ic('user'))}</div>`}
 function tabbar(cur){
  const T=[['home','home','Home'],['agendamentos','cal','Agendamentos'],['mensagens','chat','Mensagens'],['perfil','user','Perfil']];
- return `<nav class="tabbar" aria-label="Principal">${T.map(([r,i,l])=>`<button data-go="${r}" ${cur===r?'aria-current="page"':''}>${ic(i)}<span>${l}</span>${r==='mensagens'&&S.counts.msgs?`<em class="cnt">${S.counts.msgs}</em>`:''}</button>`).join('')}</nav>`;
+ const ci=Math.max(0,T.findIndex(x=>x[0]===cur)),pi=window.__tabI==null?ci:window.__tabI;window.__tabI=ci;if(pi!==ci)requestAnimationFrame(()=>requestAnimationFrame(()=>{const n=document.querySelector('.tabbar .ind');if(n)n.style.setProperty('--i',ci)}));
+ return `<nav class="tabbar" aria-label="Principal" style="--i:${pi}">${cur?'<span class="ind" aria-hidden="true"></span>':''}${T.map(([r,i,l])=>`<button data-go="${r}" ${cur===r?'aria-current="page"':''}>${ic(i)}<span>${l}</span>${r==='mensagens'&&S.counts.msgs?`<em class="cnt">${S.counts.msgs}</em>`:''}</button>`).join('')}</nav>`;
 }
 /* ===================== CONFIGURAR PERFIL ===================== */
 let P=null,PE={},SUG={},srchT,cepT,qT;
@@ -105,9 +106,9 @@ function setupPage(keep,focusNum){
  const a=myAcc()||{},pro=isPro(a),edit=!needSetup();
  const sub=edit?'Atualize seus dados quando quiser.':pro?'Precisamos de mais alguns dados para publicar o seu perfil profissional.':'Precisamos de mais alguns dados para liberar o app.';
  app().innerHTML=header('configurar-perfil',{nobar:true})+hero({title:edit?'Editar perfil':'Complete seu cadastro',sub})+`<main class="wrap">
-  ${pro?`<div class="ap-banner${P.banner?' has':''}"${P.banner?` style="background-image:url('${esc(P.banner)}')"`:''}><div class="ap-bn-a"><label class="ap-bn-b" for="x-banner">${ic('camera')}<span>${P.banner?'Trocar banner':'Adicionar banner'}</span><input id="x-banner" type="file" accept="image/*" hidden></label>${P.banner?`<button type="button" class="ap-bn-x" data-xdelbanner aria-label="Remover banner">${ic('trash')}</button>`:''}</div></div>`:''}
-  <div class="ap-who${pro?' ovl':''}"><label class="ap-photo" for="x-photo">${avatarHTML(P.photo,'','xl')}<span class="cam">${ic('camera')}</span><input id="x-photo" type="file" accept="image/*" hidden></label>
-   <b>${esc(a.nome||'')}</b><span class="pill">${ic(pro?'eyel':'user')}${pro?'Profissional':'Cliente'}</span><small>${esc(a.doc||'')}</small></div>
+  ${bnHTML(P.banner)}
+  <div class="ap-who ovl"><label class="ap-photo" for="x-photo">${avatarHTML(P.photo,'','xl')}<span class="cam">${ic('camera')}</span><input id="x-photo" type="file" accept="image/*" hidden></label>
+   <b>${esc(a.nome||'')}</b><span class="pill">${ic(pro?'eyel':'user')}${pro?'Profissional':'Cliente'}</span><small title="Seus dados ficam protegidos">${esc(censorDoc(a.doc))}</small></div>
   <div class="xform"><section class="xsec"><h2>Endereço</h2><p class="xd">Ative sua localização ou busque seu endereço, depois confirme o número.</p>${addrBlock('')}</section>
   ${pro?proSections():`<section class="xsec"><h2>Estilos que você gosta</h2><p class="xd">Opcional. Ajuda a encontrar profissionais para o seu tipo de olhar.</p>${chips(PREFS.map(x=>[x,x]),P.pref,'data-xpref')}</section>`}</div>
   <div class="xtip">${ic('eyel')}<p>${pro?'Depois de concluir, adicione fotos dos seus trabalhos no perfil. Elas fazem toda a diferença para novas clientes.':'Depois de concluir, salve suas profissionais favoritas e solicite um horário direto pelo app.'}</p></div>
@@ -147,13 +148,16 @@ async function cepLookup(t){
  try{const r=await fetch('https://viacep.com.br/ws/'+c+'/json/'),j=await r.json();if(j.erro)return;
   if(j.logradouro)o.rua=j.logradouro;if(j.bairro)o.bairro=j.bairro;if(j.localidade)o.cidade=j.localidade;if(j.uf)o.uf=j.uf;setupPage(true,true)}catch(e){}
 }
+const bnHTML=(url,cls='')=>`<div class="ap-banner ${cls}${url?' has':''}">${url?`<img class="bn-img" src="${esc(url)}" alt="" decoding="async">`:''}<div class="ap-bn-a"><label class="ap-bn-b" for="x-banner">${ic('camera')}<span>${url?'Trocar banner':'Adicionar banner'}</span><input id="x-banner" type="file" accept="image/*" hidden></label>${url?`<button type="button" class="ap-bn-x" data-xdelbanner aria-label="Remover banner">${ic('trash')}</button>`:''}</div></div>`;
+const bnCur=()=>(S.setup&&S.setup.banner)||'';
+const bnRerender=()=>{if(CUR==='perfil')perfilPage();else setupPage(true)};
 function readBanner(f){
  if(!f)return;if(!/^image\//.test(f.type)){toast('Escolha uma imagem');return}
  const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{
   const W=1280,Hh=427,c=document.createElement('canvas');c.width=W;c.height=Hh;
   const k=Math.max(W/im.width,Hh/im.height),sw=W/k,sh=Hh/k;
   c.getContext('2d').drawImage(im,(im.width-sw)/2,(im.height-sh)/2,sw,sh,0,0,W,Hh);
-  c.toBlob(b=>act(async()=>{const r=await API('POST','/api/me/banner',b,true);P.banner=r.banner;if(S.setup)S.setup.banner=r.banner;setupPage(true);toast('Banner atualizado')}),'image/jpeg',.85)};
+  c.toBlob(b=>act(async()=>{const r=await API('POST','/api/me/banner',b,true);const nb=r.banner+'?v='+Date.now();if(P)P.banner=nb;if(S.setup)S.setup.banner=nb;bnRerender();toast('Banner atualizado')}),'image/jpeg',.85)};
   im.onerror=()=>toast('Não consegui abrir essa imagem');im.src=r.result};
  r.readAsDataURL(f);
 }
@@ -437,8 +441,8 @@ function perfilPage(){
  const a=myAcc()||{},s=mySetup()||{},pro=isPro(a),wk=(s.atend==='domicilio'||s.mesmo)?s:(s.w||{});
  const row=(l,v)=>v?`<div class="fact"><small>${l}</small>${esc(v)}</div>`:'';
  const addr=o=>[o.rua&&(o.rua+', '+o.num),o.bairro,o.cidade&&(o.cidade+' - '+o.uf),o.cep].filter(Boolean).join(' · ');
- app().innerHTML=header('perfil')+hero({title:'Meu perfil',sub:'Seus dados e preferências.'})+`<main class="wrap"><div class="pf2"><div class="pf2-a">
-  <div class="ap-who left">${avatarHTML(s.photo,a.nome,'xl')}<b>${esc(pro?(s.nomeProf||a.nome):a.nome)}</b><span class="pill">${ic(pro?'eyel':'user')}${pro?esc(s.spec||'Profissional'):'Cliente'}</span><small>${esc(a.email||'')}</small></div>
+ app().innerHTML=header('perfil')+hero({title:'Meu perfil',sub:'Seus dados e preferências.'})+`<main class="wrap">${bnHTML(s.banner,'pfb')}<div class="pf2"><div class="pf2-a">
+  <div class="ap-who left">${avatarHTML(s.photo,a.nome,'xl')}<b>${esc(pro?(s.nomeProf||a.nome):a.nome)}</b><span class="pill">${ic(pro?'eyel':'user')}${pro?esc(s.spec||'Profissional'):'Cliente'}</span><small>${esc(censorMail(a.email))}</small></div>
   <div class="row-actions" style="justify-content:center"><button class="btn" data-go="configurar-perfil">Editar perfil</button></div></div>
   <div class="pf2-b"><section class="xsec"><h2>Endereço</h2><div class="facts">${row('Endereço',addr(s))}</div></section>
   ${pro?`<section class="xsec"><h2>Serviços</h2><div class="xps">${(s.services||[]).map(v=>`<div><span>${esc(v.n)}<small>${durTxt(v.d)}</small></span><b>${brl0(v.p)}</b></div>`).join('')}</div></section>
@@ -457,7 +461,7 @@ document.addEventListener('click',e=>{
  if(t.closest('[data-xback]')){if(needSetup()){logout();toast('Você saiu da conta')}else go('perfil');return}
  if(t.closest('[data-xnotif]')){openNotifs();return}
  if(t.closest('[data-xmore]')){openMore();return}
- if(t.closest('[data-xdelbanner]')){act(async()=>{await DEL('/api/me/banner');P.banner='';if(S.setup)S.setup.banner='';setupPage(true);toast('Banner removido')});return}
+ if(t.closest('[data-xdelbanner]')){act(async()=>{await DEL('/api/me/banner');if(P)P.banner='';if(S.setup)S.setup.banner='';bnRerender();toast('Banner removido')});return}
  if(t.closest('[data-xfilter]')){openFilter();return}
  if(el=t.closest('[data-xsortf]')){xfSet(el,()=>{H.sort=el.dataset.xsortf});return}
  if(el=t.closest('[data-xf-atend]')){xfSet(el,()=>{H.atend=el.dataset.xfAtend});return}

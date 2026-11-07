@@ -42,21 +42,7 @@ async function API(method,url,body,raw){
   catch(e){throw new ApiError(0,'Sem conexão com o servidor. Verifique sua internet e tente de novo.')}
   let j=null;try{j=await r.json()}catch(e){}
   if(!r.ok){
-    /* Um 401 isolado não derruba a conta: antes de sair, confere com o servidor se a sessão realmente acabou. */
-    if(r.status===401&&S.acc&&!url.startsWith('/api/auth/')){
-      let gone=false;
-      for(let i=0;i<2&&!gone;i++){
-        try{const m=await fetch('/api/me',{credentials:'same-origin',headers:{'X-BH':'1'},cache:'no-store'});const mj=await m.json();
-          if(mj&&mj.account){gone=false;break}gone=i===1}catch(e){gone=false;break}
-        if(!gone)await new Promise(z=>setTimeout(z,350));
-      }
-      if(gone){S.acc=null;S.setup=null;S.reg=null;try{toast('Sua sessão terminou. Entre novamente para continuar.')}catch(e){}go('entrar')}
-      else throw new ApiError(503,'Não consegui concluir agora. Tente de novo em instantes.');
-    }
-    /* Perfil que aparece na lista mas ainda não respondeu: tenta mais uma vez antes de mostrar erro. */
-    if(r.status===404&&method==='GET'&&/^\/api\/pros\/p\d+$/.test(url)&&!API._retry){
-      API._retry=true;try{await new Promise(z=>setTimeout(z,400));return await API(method,url,body,raw)}finally{API._retry=false}
-    }
+    if(r.status===401&&S.acc&&!url.startsWith('/api/auth/')){S.acc=null;S.setup=null;S.reg=null;try{toast('Sua sessão expirou. Entre de novo.')}catch(e){}go('entrar')}
     throw new ApiError(r.status,(j&&j.error)||'Algo deu errado. Tente de novo.',j&&j.fields);
   }
   return j;
@@ -710,13 +696,14 @@ const maskCep=v=>{v=digits(v).slice(0,8);return v.length>5?v.slice(0,5)+'-'+v.sl
 const gp=(o,k)=>k.split('.').reduce((a,p)=>a==null?a:a[p],o);
 const sp=(o,k,v)=>{const p=k.split('.'),l=p.pop();let c=o;p.forEach(x=>c=c[x]);c[l]=v};
 const firstName=()=>String((myAcc()||{}).nome||'').split(' ')[0]||'';
-const greet=()=>{const h=new Date().getHours();return h<12?'Bom dia':h<18?'Boa tarde':'Boa noite'};
+const greet=()=>{const h=new Date().getHours();return h<5?'Boa madrugada':h<12?'Bom dia':h<18?'Boa tarde':'Boa noite'};
+setInterval(()=>{const k=document.querySelector('.ap-hero .kk');if(k&&k.textContent!==greet())k.textContent=greet()},30000);
+document.addEventListener('visibilitychange',()=>{const k=document.querySelector('.ap-hero .kk');if(k)k.textContent=greet()});
 const brl0=n=>'R$ '+Number(n).toLocaleString('pt-BR',{minimumFractionDigits:n%1?2:0,maximumFractionDigits:2});
 
 /* ----- peças visuais ----- */
 const logoRow=()=>`<div class="ap-logo">${logoMark(true)}<b>Beauty Hub</b></div>`;
-document.addEventListener('error',e=>{const t=e.target;if(t&&t.tagName==='IMG'&&t.parentNode&&t.parentNode.classList&&t.parentNode.classList.contains('ap-av')){t.parentNode.innerHTML=ic('user')}},true);
-function avatarHTML(photo,name,cls=''){return `<div class="ap-av ${cls}">${photo?`<img src="${esc(photo)}" alt="" decoding="async">`:(name?`<span>${esc(initials(name))}</span>`:ic('user'))}</div>`}
+function avatarHTML(photo,name,cls=''){return `<div class="ap-av ${cls}">${photo?`<img src="${esc(photo)}" alt="">`:(name?`<span>${esc(initials(name))}</span>`:ic('user'))}</div>`}
 function tabbar(cur){
  const T=[['home','home','Home'],['agendamentos','cal','Agendamentos'],['mensagens','chat','Mensagens'],['perfil','user','Perfil']];
  return `<nav class="tabbar" aria-label="Principal">${T.map(([r,i,l])=>`<button data-go="${r}" ${cur===r?'aria-current="page"':''}>${ic(i)}<span>${l}</span>${r==='mensagens'&&S.counts.msgs?`<em class="cnt">${S.counts.msgs}</em>`:''}</button>`).join('')}</nav>`;
@@ -740,17 +727,11 @@ function xsel(k,label,opts,o={}){
  return `<div class="xf ${o.cls||''}"><label for="${id}">${label}${o.req?' *':''}</label><select id="${id}" data-px="${k}" class="${PE[k]?'bad':''}"><option value="">${o.ph||'Selecione'}</option>${opts.map(x=>`<option ${String(x)===String(v)?'selected':''}>${esc(x)}</option>`).join('')}</select>${xerr(k)}</div>`;
 }
 const chips=(arr,sel,attr)=>`<div class="xchips">${arr.map(([v,l])=>`<button type="button" class="xchip" ${attr}="${esc(v)}" aria-pressed="${sel.includes(v)}">${esc(l)}</button>`).join('')}</div>`;
-const isSN=v=>/^s\/?n$/i.test(String(v||'').trim());
-function numField(key,tg){
- const sn=isSN(gp(P,key)),id='x-'+key.replace('.','-');
- const f=xf(key,'Número',{ph:'Número',req:1,mode:'numeric'});
- return (sn?f.replace(`id="${id}"`,`id="${id}" disabled`):f)+`<label class="xck xsn"><input type="checkbox" data-xsn="${tg}" ${sn?'checked':''}><span>Sem número (S/N)</span></label>`;
-}
 function addrBlock(t){
  const k=s=>t?t+'.'+s:s,tg=t||'main';
  return `<button type="button" class="xloc" data-xloc="${tg}">${ic('locate')}Usar minha localização atual</button>
  <div class="xf"><div class="xsearch">${ic('search')}<input type="search" data-xbusca="${tg}" placeholder="Buscar endereço" autocomplete="off" aria-label="Buscar endereço"></div><div class="xsug" id="x-sug-${tg}"></div></div>
- ${xf(k('rua'),'Rua/Avenida',{ph:'Rua/Avenida',req:1,auto:'street-address'})}${numField(k('num'),tg)}${xf(k('bairro'),'Bairro')}
+ ${xf(k('rua'),'Rua/Avenida',{ph:'Rua/Avenida',req:1,auto:'street-address'})}${xf(k('num'),'Número',{ph:'Número',req:1,mode:'numeric'})}${xf(k('bairro'),'Bairro')}
  <div class="xrow">${xf(k('cidade'),'Cidade',{req:1,cls:'g'})}${xsel(k('uf'),'UF',UFS,{req:1,ph:'UF',cls:'uf'})}</div>${xf(k('cep'),'CEP',{ph:'00000-000',mode:'numeric'})}`;
 }
 function svcCard(s,i){
@@ -789,7 +770,7 @@ function setupPage(keep,focusNum){
  const a=myAcc()||{},pro=isPro(a),edit=!needSetup();
  const sub=edit?'Atualize seus dados quando quiser.':pro?'Precisamos de mais alguns dados para publicar o seu perfil profissional.':'Precisamos de mais alguns dados para liberar o app.';
  app().innerHTML=header('configurar-perfil',{nobar:true})+hero({title:edit?'Editar perfil':'Complete seu cadastro',sub})+`<main class="wrap">
-  <div class="ap-who ${pro?'hasb':''}">${pro?`<label class="ap-banner" for="x-banner" ${P.banner?`style="background-image:url('${esc(P.banner)}')"`:''}><span class="bcam">${ic('camera')}${P.banner?'Editar banner':'Adicionar banner'}</span><input id="x-banner" type="file" accept="image/*" hidden></label>`:''}<label class="ap-photo" for="x-photo">${avatarHTML(P.photo,'','xl')}<span class="cam">${ic('camera')}</span><input id="x-photo" type="file" accept="image/*" hidden></label>
+  <div class="ap-who"><label class="ap-photo" for="x-photo">${avatarHTML(P.photo,'','xl')}<span class="cam">${ic('camera')}</span><input id="x-photo" type="file" accept="image/*" hidden></label>
    <b>${esc(a.nome||'')}</b><span class="pill">${ic(pro?'eyel':'user')}${pro?'Profissional':'Cliente'}</span><small>${esc(a.doc||'')}</small></div>
   <div class="xform"><section class="xsec"><h2>Endereço</h2><p class="xd">Ative sua localização ou busque seu endereço, depois confirme o número.</p>${addrBlock('')}</section>
   ${pro?proSections():`<section class="xsec"><h2>Estilos que você gosta</h2><p class="xd">Opcional. Ajuda a encontrar profissionais para o seu tipo de olhar.</p>${chips(PREFS.map(x=>[x,x]),P.pref,'data-xpref')}</section>`}</div>
@@ -834,24 +815,14 @@ function readPhoto(f){
  if(!f)return;if(!/^image\//.test(f.type)){toast('Escolha uma imagem');return}
  const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{
   const s=640,c=document.createElement('canvas');c.width=c.height=s;const m=Math.min(im.width,im.height);
-  const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,s,s);g.drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,s,s);
+  c.getContext('2d').drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,s,s);
   c.toBlob(b=>act(async()=>{const r=await API('POST','/api/me/photo',b,true);P.photo=r.photo;if(S.setup)S.setup.photo=r.photo;setupPage(true);toast('Foto atualizada')}),'image/jpeg',.85)};
-  im.onerror=()=>toast('Não consegui abrir essa imagem');im.src=r.result};
- r.readAsDataURL(f);
-}
-function readBanner(f){
- if(!f)return;if(!/^image\//.test(f.type)){toast('Escolha uma imagem');return}
- const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{
-  const W=1600,H=640,c=document.createElement('canvas');c.width=W;c.height=H;
-  const sc=Math.max(W/im.width,H/im.height),w=im.width*sc,h=im.height*sc;
-  const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,W,H);g.drawImage(im,(W-w)/2,(H-h)/2,w,h);
-  c.toBlob(b=>act(async()=>{const r=await API('POST','/api/me/banner',b,true);if(P)P.banner=r.banner;if(S.setup)S.setup.banner=r.banner;if(CUR==='profissional'){await proPage()}else{setupPage(true)}toast('Banner atualizado')}),'image/jpeg',.85)};
   im.onerror=()=>toast('Não consegui abrir essa imagem');im.src=r.result};
  r.readAsDataURL(f);
 }
 function addrErrors(o,pre,E,nomeLocal){
  if(!o.rua.trim())E[pre+'rua']='Informe a rua ou avenida.';
- if(!o.num.trim())E[pre+'num']='Informe o número ou marque “Sem número”.';
+ if(!o.num.trim())E[pre+'num']='Informe o número (ou S/N).';
  if(!o.cidade.trim())E[pre+'cidade']='Informe a cidade.';
  if(!o.uf)E[pre+'uf']='Escolha a UF.';
  if(o.cep&&digits(o.cep).length!==8)E[pre+'cep']='O CEP tem 8 números.';
@@ -890,19 +861,25 @@ async function finishSetup(){
 const CATS=[
  ['salao','Salões por perto','store'],['estrelas','5 estrelas','star'],['palestrante','Palestrantes','mic'],['verif','Verificadas','shield'],
  ['domicilio','A domicílio','home'],['@educacao','Cursos','cap'],['@eventos','Eventos','cal'],['@lojas','Produtos','bag']];
-const H={q:'',cat:'',sort:'near',all:false,ver:false};
+const HF=()=>({ver:false,atend:'',pmin:'',pmax:'',rmin:0,spec:[],svc:[],city:'',pag:[],dia:[],hoje:false,anos:'',rev:false,novo:false,fotos:false,wa:false,agenda:false});
+const H=Object.assign({q:'',cat:'',sort:'near',all:false},HF());
+const hCount=()=>{let n=0;if(H.ver)n++;if(H.atend)n++;if(H.pmin!==''||H.pmax!=='')n++;if(H.rmin)n++;if(H.spec.length)n++;if(H.svc.length)n++;if(H.city.trim())n++;if(H.pag.length)n++;if(H.dia.length)n++;if(H.hoje)n++;if(H.anos)n++;if(H.rev)n++;if(H.novo)n++;if(H.fotos)n++;if(H.wa)n++;if(H.agenda)n++;return n};
 const minPrice=p=>p.services.length?Math.min(...p.services.map(s=>s.p)):1e9;
 let PROS_LIST=[],loadSeq=0;
 async function loadPros(){
  const seq=++loadSeq,q=new URLSearchParams();
  if(H.cat)q.set('cat',H.cat);if(H.q.trim())q.set('q',H.q.trim());if(H.ver)q.set('ver','1');q.set('sort',H.sort);
+ if(H.atend)q.set('atend',H.atend);if(H.pmin!=='')q.set('pmin',H.pmin);if(H.pmax!=='')q.set('pmax',H.pmax);if(H.rmin)q.set('rmin',H.rmin);
+ if(H.spec.length)q.set('spec',H.spec.join(','));if(H.svc.length)q.set('svc',H.svc.join(','));if(H.city.trim())q.set('city',H.city.trim());
+ if(H.pag.length)q.set('pag',H.pag.join(','));if(H.dia.length)q.set('dia',H.dia.join(','));if(H.anos)q.set('anos',H.anos);
+ ['hoje','rev','novo','fotos','wa','agenda'].forEach(k=>{if(H[k])q.set(k,'1')});
  const r=await GET('/api/pros?'+q);
  if(seq===loadSeq)PROS_LIST=remember(r.items);
 }
 const homeList=()=>PROS_LIST;
 function proCardApp(p){
  const f=S.favs.includes(p.id),top=p.services.slice(0,2).map(s=>s.n.replace('Extensão de cílios – ','')),mp=minPrice(p);
- return `<article class="pc" data-xpro="${p.id}" tabindex="0" role="button" aria-label="Ver ${esc(p.name)}">
+ return `<article class="pc${p.cover?' has-cv':''}" data-xpro="${p.id}" tabindex="0" role="button" aria-label="Ver ${esc(p.name)}">
   ${p.cover?`<img class="pc-cv" src="${esc(p.cover)}" alt="" loading="lazy">`:avatarHTML(p.photo,p.name)}<div class="pc-b"><h3>${esc(p.name)}${p.own?' <em>você</em>':''}</h3><small>${esc(p.role)}${p.verified?` · <span class="verified">${ic('shield')}Verificada</span>`:''}</small>
   <div class="pc-m">${p.rating?`<span class="rate">${ic('star','fill')} ${rateTxt(p)} <span>(${p.reviews})</span></span>`:'<span class="novo">Novo</span>'}<span>${ic('pin')}${esc(p.city)}</span></div>
   <div class="pc-t">${top.map(t=>`<span>${esc(t)}</span>`).join('')}</div></div>
@@ -910,7 +887,7 @@ function proCardApp(p){
 }
 function homeListHTML(){
  const L=homeList(),show=(H.all||DESK())?L:L.slice(0,4);
- const emp=H.cat?'Nenhuma profissional nesta categoria por enquanto.':H.sort==='fav'?'Você ainda não favoritou ninguém. Toque no coração de uma profissional para salvar.':'Nenhuma profissional encontrada.';
+ const emp=hCount()?'Nenhuma profissional com esses filtros. Tente remover algum.':H.cat?'Nenhuma profissional nesta categoria por enquanto.':H.sort==='fav'?'Você ainda não favoritou ninguém. Toque no coração de uma profissional para salvar.':'Nenhuma profissional encontrada.';
  return (show.length?show.map(proCardApp).join(''):`<div class="ap-empty">${ic('eyel')}<p>${emp}</p></div>`)+(!H.all&&!DESK()&&L.length>4?`<button class="btn ghost ap-more" data-xall>Ver todas (${L.length})</button>`:'');
 }
 async function homePage(){
@@ -920,7 +897,7 @@ async function homePage(){
  app().innerHTML=header('home')+`<main class="wrap">
   <section class="ap-hero">${lashArc()}<span class="kk">${greet()}</span><h1>${esc(firstName())}</h1>
    <p>${pro?'Como está o seu estúdio hoje?':'Encontre quem cuida do seu olhar.'}</p>
-   <div class="ap-search">${ic('search')}<input id="x-q" type="search" placeholder="Buscar serviço ou profissional" value="${esc(H.q)}" aria-label="Buscar serviço ou profissional"><button class="fl" data-xfilter aria-label="Filtros">${ic('sliders')}</button></div></section>
+   <div class="ap-search">${ic('search')}<input id="x-q" type="search" placeholder="Buscar serviço ou profissional" value="${esc(H.q)}" aria-label="Buscar serviço ou profissional"><button class="fl" data-xfilter aria-label="Filtros${hCount()?' ('+hCount()+' ativos)':''}">${ic('sliders')}${hCount()?`<i class="fl-n">${hCount()}</i>`:''}</button></div></section>
   ${pro&&st?`<div class="ap-pro"><div>${ic('eyel')}<span><b>${esc(st.nomeProf||a.nome)}</b><small>${(st.services||[]).length} serviço${(st.services||[]).length===1?'':'s'} · ${esc(st.cidade)} - ${esc(st.uf)}</small></span></div><button class="btn sm ghost" data-go="configurar-perfil">Editar</button></div>`:''}
   <div class="ap-sh"><h2>Explore por categoria</h2></div>
   <div class="tiles">${CATS.map(([k,l,i])=>`<button class="tile" ${k[0]==='@'?`data-go="${k.slice(1)}"`:`data-xcat="${k}" aria-pressed="${H.cat===k}"`}><span class="ti">${ic(i)}</span><span class="tl">${l}</span></button>`).join('')}</div>
@@ -928,12 +905,47 @@ async function homePage(){
   <div class="ap-sh"><h2>${cur?cur[1]:'Especialistas em destaque'}</h2><button class="lk2" data-xall>${H.all?'Ver menos':'Ver todos'} ${ic('arrow')}</button></div>
   <div id="x-list" class="pcs">${homeListHTML()}</div></main>`+footer();
 }
+const FSPEC=SPECIALTIES.filter(x=>x!=='Palestrante');
+const FSVC=(SERVICES['Cílios']||[]).map(n=>[n.replace('Extensão de cílios – ',''),n.replace('Extensão de cílios – ','')]);
+const FCHIP=(items,sel,attr)=>`<div class="xchips">${items.map(([v,l])=>`<button type="button" class="xchip" ${attr}="${esc(v)}" aria-pressed="${sel.includes(v)}">${esc(l)}</button>`).join('')}</div>`;
+const FTOG=(k,label)=>`<label class="xck"><input type="checkbox" data-xtog="${k}" ${H[k]?'checked':''}><span>${label}</span></label>`;
 function openFilter(){
- openSheet(`${closeBtn}<div class="body"><h2>Filtros</h2><span class="xcap">Ordenar por</span>
-  <div class="xchips">${[['near','Perto de você'],['price','Menor preço'],['rate','Melhor avaliação']].map(([k,l])=>`<button class="xchip lg" data-xsort="${k}" data-xclose aria-pressed="${H.sort===k}">${l}</button>`).join('')}</div>
-  <label class="xck"><input type="checkbox" data-xver ${H.ver?'checked':''}><span>Mostrar apenas perfis verificados</span></label>
-  <div class="row-actions"><button class="btn" data-close>Aplicar</button><button class="btn ghost" data-xclear>Limpar filtros</button></div></div>`);
+ const sorts=[['near','Perto de você'],['price','Menor preço'],['rate','Melhor avaliação']];
+ openSheet(`${closeBtn}<div class="body xfs"><h2>Filtros</h2>
+  <span class="xcap">Ordenar por</span>
+  <div class="xchips">${sorts.map(([k,l])=>`<button class="xchip lg" data-xsortf="${k}" aria-pressed="${H.sort===k}">${l}</button>`).join('')}</div>
+  <span class="xcap">Tipo de atendimento</span>
+  <div class="xchips">${[['','Qualquer'],['estudio','No estúdio'],['domicilio','A domicílio']].map(([v,l])=>`<button type="button" class="xchip" data-xf-atend="${v}" aria-pressed="${H.atend===v}">${l}</button>`).join('')}</div>
+  <span class="xcap">Faixa de preço (R$)</span>
+  <div class="xrange"><input type="number" inputmode="numeric" min="0" step="10" placeholder="De" data-xf-pmin value="${esc(H.pmin)}" aria-label="Preço mínimo"><span>até</span><input type="number" inputmode="numeric" min="0" step="10" placeholder="Até" data-xf-pmax value="${esc(H.pmax)}" aria-label="Preço máximo"></div>
+  <span class="xcap">Avaliação mínima</span>
+  <div class="xchips">${[[0,'Todas'],[3,'3+ ★'],[4,'4+ ★'],[4.5,'4,5+ ★'],[5,'5 ★']].map(([v,l])=>`<button type="button" class="xchip" data-xf-rmin="${v}" aria-pressed="${H.rmin===v}">${l}</button>`).join('')}</div>
+  <span class="xcap">Especialidade</span>${FCHIP(FSPEC.map(x=>[x,x]),H.spec,'data-xf-spec')}
+  <span class="xcap">Serviço oferecido</span>${FCHIP(FSVC,H.svc,'data-xf-svc')}
+  <span class="xcap">Cidade ou bairro</span>
+  <input class="xin" type="search" placeholder="Ex.: São José de Ribamar" data-xf-city value="${esc(H.city)}" aria-label="Cidade">
+  <span class="xcap">Atende nos dias</span>${FCHIP(DIAS.map((d,i)=>[String(i),d]),H.dia.map(String),'data-xf-dia')}
+  ${FTOG('hoje','Aberta agora')}
+  <span class="xcap">Experiência mínima</span>
+  <div class="xchips">${[['','Qualquer'],...ANOS.slice(1).map(a=>[a,a])].map(([v,l])=>`<button type="button" class="xchip" data-xf-anos="${esc(v)}" aria-pressed="${H.anos===v}">${l}</button>`).join('')}</div>
+  <span class="xcap">Formas de pagamento aceitas</span>${FCHIP(PAGTO.map(x=>[x,x]),H.pag,'data-xf-pag')}
+  <span class="xcap">Perfil</span>
+  ${FTOG('ver','Mostrar apenas perfis verificados')}${FTOG('rev','Apenas com avaliações de clientes')}${FTOG('novo','Apenas profissionais novas (sem avaliações)')}${FTOG('fotos','Apenas com fotos no perfil')}${FTOG('wa','Com WhatsApp para contato')}${FTOG('agenda','Com link de agendamento')}
+  <div class="row-actions xfa"><button class="btn" data-xf-apply>${xfLabel()}</button><button class="btn ghost" data-xclear>Limpar filtros</button></div></div>`);
 }
+const xfLabel=()=>PROS_LIST.length?`Ver ${PROS_LIST.length} resultado${PROS_LIST.length===1?'':'s'}`:'Nenhum resultado';
+let xfT;
+function xfRefresh(now){
+ clearTimeout(xfT);
+ xfT=setTimeout(async()=>{
+  await act(loadPros);
+  const b=$('#x-list');if(b)b.innerHTML=homeListHTML();
+  const ap=document.querySelector('[data-xf-apply]');if(ap)ap.textContent=xfLabel();
+  const fl=document.querySelector('.ap-search .fl');if(fl){const n=hCount();fl.querySelector('.fl-n')?.remove();if(n)fl.insertAdjacentHTML('beforeend',`<i class="fl-n">${n}</i>`)}
+ },now?0:300);
+}
+function xfSet(el,fn){fn();H.all=false;el.closest('.xchips')&&el.closest('.xchips').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b===el?'true':'false'));xfRefresh(true)}
+function xfToggle(el,arr){const v=el.dataset[Object.keys(el.dataset)[0]],i=arr.indexOf(v);i>=0?arr.splice(i,1):arr.push(v);el.setAttribute('aria-pressed',i<0);H.all=false;xfRefresh(true)}
 function openMore(){
  const L=[['eventos','Eventos','cal'],['educacao','Educação','cap'],['mercado','Mercado','store'],['network','Network','users'],['radar','Radar','radar'],['favoritos','Favoritos','heart']];
  openSheet(`${closeBtn}<div class="body"><h2>Explorar mais</h2><div class="xmenu">${L.map(([r,t,i])=>`<button data-go="${r}">${ic(i)}<span>${t}</span>${ic('chev')}</button>`).join('')}<button data-logout class="out">${ic('out')}<span>Sair da conta</span></button></div></div>`);
@@ -1100,10 +1112,19 @@ document.addEventListener('click',e=>{
  if(t.closest('[data-xnotif]')){openNotifs();return}
  if(t.closest('[data-xmore]')){openMore();return}
  if(t.closest('[data-xfilter]')){openFilter();return}
+ if(el=t.closest('[data-xsortf]')){xfSet(el,()=>{H.sort=el.dataset.xsortf});return}
+ if(el=t.closest('[data-xf-atend]')){xfSet(el,()=>{H.atend=el.dataset.xfAtend});return}
+ if(el=t.closest('[data-xf-rmin]')){xfSet(el,()=>{H.rmin=+el.dataset.xfRmin});return}
+ if(el=t.closest('[data-xf-anos]')){xfSet(el,()=>{H.anos=el.dataset.xfAnos});return}
+ if(el=t.closest('[data-xf-spec]')){xfToggle(el,H.spec);return}
+ if(el=t.closest('[data-xf-svc]')){xfToggle(el,H.svc);return}
+ if(el=t.closest('[data-xf-pag]')){xfToggle(el,H.pag);return}
+ if(el=t.closest('[data-xf-dia]')){const v=el.dataset.xfDia,i=H.dia.indexOf(+v);i>=0?H.dia.splice(i,1):H.dia.push(+v);el.setAttribute('aria-pressed',i<0);xfRefresh(true);return}
+ if(t.closest('[data-xf-apply]')){closeSheet();homePage();return}
  if(el=t.closest('[data-xcat]')){H.cat=H.cat===el.dataset.xcat?'':el.dataset.xcat;H.all=false;homePage();return}
  if(el=t.closest('[data-xsort]')){H.sort=el.dataset.xsort;H.all=false;if(el.hasAttribute('data-xclose'))closeSheet();homePage();return}
  if(t.closest('[data-xall]')){H.all=!H.all;homePage();return}
- if(t.closest('[data-xclear]')){H.sort='near';H.ver=false;H.cat='';H.q='';closeSheet();homePage();return}
+ if(t.closest('[data-xclear]')){H.sort='near';Object.assign(H,HF());H.cat='';H.q='';H.all=false;closeSheet();homePage();return}
  if(el=t.closest('[data-xpro]')){PP.tab='pubs';closeSheet();go('profissional/'+el.dataset.xpro);return}
  if(el=t.closest('[data-xbook]')){openBook(el.dataset.xbook);return}
  if(el=t.closest('[data-xconfirm]')){confirmBook(el.dataset.xconfirm);return}
@@ -1121,6 +1142,9 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('input',e=>{
  const t=e.target,d=t.dataset||{};
+ if(t.hasAttribute&&t.hasAttribute('data-xf-pmin')){H.pmin=t.value===''?'':String(Math.max(0,+t.value));xfRefresh();return}
+ if(t.hasAttribute&&t.hasAttribute('data-xf-pmax')){H.pmax=t.value===''?'':String(Math.max(0,+t.value));xfRefresh();return}
+ if(t.hasAttribute&&t.hasAttribute('data-xf-city')){H.city=t.value;xfRefresh();return}
  if(t.id==='x-q'){H.q=t.value;H.all=false;clearTimeout(qT);qT=setTimeout(async()=>{await act(loadPros);const b=$('#x-list');if(b)b.innerHTML=homeListHTML()},250);return}
  if(d.xbusca){clearTimeout(srchT);const q=t.value.trim(),g=d.xbusca;if(q.length<4){const b=$('#x-sug-'+g);if(b)b.innerHTML='';return}srchT=setTimeout(()=>searchAddr(q,g),500);return}
  if(d.xsvc){const [i,f]=d.xsvc.split(':');P.services[+i][f]=t.value;if(f==='p'){delete PE['svc'+i];t.classList.remove('bad');t.closest('.xsvc')?.querySelector('.xerr')?.remove()}return}
@@ -1138,10 +1162,9 @@ document.addEventListener('input',e=>{
 document.addEventListener('change',e=>{
  const t=e.target,d=t.dataset||{};
  if(t.id==='x-photo'){readPhoto(t.files[0]);return}
- if(t.id==='x-banner'||t.id==='x-banner-pp'){readBanner(t.files[0]);t.value='';return}
- if(d.xsn!==undefined){const o=d.xsn==='w'?P.w:P,pre=d.xsn==='w'?'w.':'';o.num=t.checked?'S/N':'';delete PE[pre+'num'];setupPage(true);return}
  if(t.id==='b-svc'||t.id==='b-dt'){refreshSlots();return}
  if(d.xver!==undefined){H.ver=t.checked;homePage();return}
+ if(d.xtog){H[d.xtog]=t.checked;H.all=false;xfRefresh(true);return}
  if(d.xsvc){const [i,f]=d.xsvc.split(':');P.services[+i][f]=t.value;return}
  if(d.px==='mesmo'){P.mesmo=t.checked;setupPage(true)}
 });
@@ -1186,7 +1209,7 @@ async function proPage(id){
   }
   const ext=(h,l)=>`<a class="btn ghost" href="${esc(h)}" target="_blank" rel="noopener noreferrer">${l}</a>`;
   app().innerHTML=header('profissional',{nobar:true})+`<main class="wrap pp">
-   <div class="pp-cover" ${p.banner?`style="background-image:url('${esc(p.banner)}')"`:''}>${p.own?`<label class="bcam" for="x-banner-pp">${ic('camera')}<span>${p.banner?'Editar banner':'Adicionar banner'}</span><input id="x-banner-pp" type="file" accept="image/*" hidden></label>`:''}</div>
+   <div class="pp-cover"></div>
    <div class="pp-id">${avatarHTML(p.photo,p.name,'xl')}<div><h1>${esc(p.name)}</h1><small>${esc(p.role)} · ${esc(p.city)}</small>${p.verified?`<span class="pp-ver">${ic('shield')}Perfil verificado</span>`:''}</div></div>
    ${tot?`<div class="pp-rec"><div class="pp-rec-h"><span>Avaliações recentes</span><span class="rate">${ic('star','fill')} ${rateTxt(p)} <span>(${tot})</span></span></div>
      <div class="pp-rec-b">${last?`<div class="pp-mini"><b>${last.nota} ★ · ${ago(last.at)}</b><span>${esc((last.texto||NOTA_L[last.nota]||'').slice(0,60))}</span></div>`:''}<button class="btn ghost" data-pptab="aval">Ler avaliações</button></div></div>`:''}
@@ -1288,7 +1311,6 @@ async function route(){
   if(S.acc&&needSetup()&&r!=='configurar-perfil'&&!AUTH_ROUTES.includes(r))redir('configurar-perfil');
   if(r==='admin'&&!isAdmin())redir('home');
   if(r!=='mensagens')MSG.cur=null;
-  {const h=document.documentElement;h.classList.remove('rt');void h.offsetWidth;h.classList.add('rt');clearTimeout(route._t);route._t=setTimeout(()=>h.classList.remove('rt'),1100)}
   CUR=r;document.body.classList.toggle('appmode',!AUTH_ROUTES.includes(r));
   if(AUTH_ROUTES.includes(r)){authPage(r);document.title=(r==='entrar'?'Entrar':'Criar conta')+' | Beauty Hub';return}
   const pages={home:homePage,mercado:mercadoPage,network:netPage,radar:radarPage,busca:searchPage,favoritos:favPage,cadastro:signupPage,'meu-perfil':meuPerfil,admin:adminPage,'configurar-perfil':()=>setupPage(),agendamentos:agendaPage,mensagens:msgPage,perfil:perfilPage,profissional:()=>proPage(arg)};

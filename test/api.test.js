@@ -52,6 +52,17 @@ test('perfil profissional exige dados reais e aparece na busca só depois de pro
   assert.equal(list[0].doc, undefined);
   assert.equal((await cli.get('/api/pros?q=russo')).body.items.length, 1);
   assert.equal((await cli.get('/api/pros?q=unha')).body.items.length, 0);
+  /* filtros avançados */
+  const n = async qs => (await cli.get('/api/pros?' + qs)).body.items.length;
+  assert.equal(await n('atend=estudio'), 1); assert.equal(await n('atend=domicilio'), 0);
+  assert.equal(await n('pmin=100&pmax=150'), 1); assert.equal(await n('pmin=300'), 0); assert.equal(await n('pmax=100'), 0);
+  assert.equal(await n('spec=Lash Designer'), 1); assert.equal(await n('spec=Brow Designer'), 0);
+  assert.equal(await n('svc=russo'), 1); assert.equal(await n('svc=lifting'), 0);
+  assert.equal(await n('city=curitiba'), 1); assert.equal(await n('city=sao paulo'), 0);
+  assert.equal(await n('pag=Pix'), 1); assert.equal(await n('pag=Pix,Dinheiro'), 0);
+  assert.equal(await n('dia=3'), 1); assert.ok(await n('hoje=1') <= 1);
+  assert.equal(await n('rmin=4'), 0); assert.equal(await n('novo=1'), 1); assert.equal(await n('rev=1'), 0);
+  assert.equal(await n('wa=1'), 1); assert.equal(await n('fotos=1'), 0);
 });
 
 test('upload de foto valida o conteúdo do arquivo', async () => {

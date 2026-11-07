@@ -10,6 +10,9 @@ const CATF = {
   verif: p => p.verified,
   domicilio: p => p.atend === 'domicilio' || p.atend === 'ambos'
 };
+const ANOS_ORD = ['Menos de 1 ano', '1 a 2 anos', '3 a 5 anos', 'Mais de 5 anos'];
+const list = v => String(v || '').split(',').map(x => x.trim()).filter(Boolean).slice(0, 20);
+const num = v => { const n = parseFloat(String(v).replace(',', '.')); return Number.isFinite(n) ? n : null; };
 const strip = p => { const { canReview, galeria, boost, ...o } = p; return o; };
 const proId = s => { const m = String(s).match(/^p(\d+)$/); if (!m) throw new HttpError(404, 'Profissional não encontrada.'); return +m[1]; };
 
@@ -23,6 +26,33 @@ R.get('/api/pros', ctx => {
   if (q.cat && CATF[q.cat]) L = L.filter(CATF[q.cat]);
   if (q.q) { const w = D.norm(q.q).split(/\s+/).filter(Boolean); L = L.filter(p => { const h = D.norm([p.name, p.role, p.city, p.bio, p.services.map(s => s.n).join(' ')].join(' ')); return w.every(x => h.includes(x)); }); }
   if (q.ver === '1') L = L.filter(p => p.verified);
+  /* ----- filtros avançados (todos opcionais e combináveis) ----- */
+  if (q.atend === 'estudio') L = L.filter(p => p.atend !== 'domicilio');
+  if (q.atend === 'domicilio') L = L.filter(p => p.atend === 'domicilio' || p.atend === 'ambos');
+  const pmin = num(q.pmin), pmax = num(q.pmax);
+  if (pmin !== null || pmax !== null) L = L.filter(p => p.services.some(s => (pmin === null || s.p >= pmin) && (pmax === null || s.p <= pmax)));
+  const rmin = num(q.rmin);
+  if (rmin) L = L.filter(p => p.rating >= rmin);
+  const spec = list(q.spec).map(D.norm);
+  if (spec.length) L = L.filter(p => spec.includes(D.norm(p.role)));
+  const svc = list(q.svc).map(D.norm);
+  if (svc.length) L = L.filter(p => svc.some(x => p.services.some(s => D.norm(s.n).includes(x))));
+  if (q.city) { const c = D.norm(q.city); L = L.filter(p => D.norm(p.city).includes(c)); }
+  const pag = list(q.pag);
+  if (pag.length) L = L.filter(p => pag.every(x => (p.pagto || []).includes(x)));
+  const dia = list(q.dia).map(Number).filter(d => d >= 0 && d <= 6);
+  if (dia.length) L = L.filter(p => dia.some(d => (p.dias || []).includes(d)));
+  if (q.hoje === '1') {
+    const now = D.nowLocal(), wd = D.weekday(now.date);
+    L = L.filter(p => (p.dias || []).includes(wd) && p.abre && p.fecha && now.min >= D.toMin(p.abre) && now.min < D.toMin(p.fecha));
+  }
+  const am = ANOS_ORD.indexOf(q.anos);
+  if (am > 0) L = L.filter(p => ANOS_ORD.indexOf(p.anos) >= am);
+  if (q.rev === '1') L = L.filter(p => p.reviews > 0);
+  if (q.novo === '1') L = L.filter(p => !p.reviews);
+  if (q.fotos === '1') L = L.filter(p => p.cover || p.photo);
+  if (q.wa === '1') L = L.filter(p => p.wa);
+  if (q.agenda === '1') L = L.filter(p => p.agenda);
   if (q.sort === 'fav') {
     const favs = me ? new Set(D.all('SELECT ref FROM favorites WHERE account_id=?', me.id).map(r => r.ref)) : new Set();
     L = L.filter(p => favs.has(p.id));

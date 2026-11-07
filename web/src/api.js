@@ -12,21 +12,7 @@ async function API(method,url,body,raw){
   catch(e){throw new ApiError(0,'Sem conexão com o servidor. Verifique sua internet e tente de novo.')}
   let j=null;try{j=await r.json()}catch(e){}
   if(!r.ok){
-    /* Um 401 isolado não derruba a conta: antes de sair, confere com o servidor se a sessão realmente acabou. */
-    if(r.status===401&&S.acc&&!url.startsWith('/api/auth/')){
-      let gone=false;
-      for(let i=0;i<2&&!gone;i++){
-        try{const m=await fetch('/api/me',{credentials:'same-origin',headers:{'X-BH':'1'},cache:'no-store'});const mj=await m.json();
-          if(mj&&mj.account){gone=false;break}gone=i===1}catch(e){gone=false;break}
-        if(!gone)await new Promise(z=>setTimeout(z,350));
-      }
-      if(gone){S.acc=null;S.setup=null;S.reg=null;try{toast('Sua sessão terminou. Entre novamente para continuar.')}catch(e){}go('entrar')}
-      else throw new ApiError(503,'Não consegui concluir agora. Tente de novo em instantes.');
-    }
-    /* Perfil que aparece na lista mas ainda não respondeu: tenta mais uma vez antes de mostrar erro. */
-    if(r.status===404&&method==='GET'&&/^\/api\/pros\/p\d+$/.test(url)&&!API._retry){
-      API._retry=true;try{await new Promise(z=>setTimeout(z,400));return await API(method,url,body,raw)}finally{API._retry=false}
-    }
+    if(r.status===401&&S.acc&&!url.startsWith('/api/auth/')){S.acc=null;S.setup=null;S.reg=null;try{toast('Sua sessão expirou. Entre de novo.')}catch(e){}go('entrar')}
     throw new ApiError(r.status,(j&&j.error)||'Algo deu errado. Tente de novo.',j&&j.fields);
   }
   return j;

@@ -84,7 +84,7 @@ R.post('/api/me/delete', { auth: true }, async ctx => {
   const acc = ctx.account;
   if (!(await S.verifyPassword(String(ctx.body.senha || ''), acc.pw))) throw new HttpError(403, 'Senha incorreta.');
   const s = D.one('SELECT photo FROM setups WHERE account_id=?', acc.id);
-  if (s) { D.removeImage(s.photo); D.removeImage(s.banner); }
+  if (s) D.removeImage(s.photo);
   D.all('SELECT file FROM photos WHERE account_id=?', acc.id).forEach(p => D.removeImage(p.file));
   D.all('SELECT photo FROM posts WHERE account_id=?', acc.id).forEach(p => D.removeImage(p.photo));
   D.run('DELETE FROM accounts WHERE id=?', acc.id); // apaga em cascata tudo da conta
